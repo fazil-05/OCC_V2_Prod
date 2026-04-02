@@ -3,6 +3,7 @@ import { EventCard } from "@/components/dashboard/EventCard";
 import { ProfileForm } from "@/components/dashboard/ProfileForm";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { requireUser } from "@/lib/auth";
+import { avatarSrc } from "@/lib/avatar";
 import { prisma } from "@/lib/prisma";
 
 export default async function ProfilePage() {
@@ -29,20 +30,17 @@ export default async function ProfilePage() {
     }),
   ]);
 
-  const initials = user.fullName
-    .split(" ")
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
-
   return (
     <div className="space-y-6 sm:space-y-8 pb-10 px-4 sm:px-0 pt-2">
       <GlassCard className="sm:rounded-[32px] p-5 sm:p-8 border-x-0 sm:border border-black/[0.04]">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4 sm:gap-5">
-            <div className="flex h-16 w-16 sm:h-24 sm:w-24 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#C9A96E,#8D6A24)] text-xl sm:text-3xl text-[#0C0C0A] font-black shadow-xl">
-              {initials}
+            <div className="relative flex h-16 w-16 sm:h-24 sm:w-24 shrink-0 overflow-hidden rounded-full bg-[linear-gradient(135deg,#C9A96E,#8D6A24)] shadow-xl ring-2 ring-black/[0.06]">
+              <img
+                src={avatarSrc(user.avatar)}
+                alt=""
+                className="h-full w-full object-cover"
+              />
             </div>
             <div className="space-y-1 sm:space-y-2">
               <h1 className="font-sans text-2xl sm:text-5xl font-black text-black tracking-tighter uppercase">{user.fullName}</h1>
@@ -76,10 +74,12 @@ export default async function ProfilePage() {
             initialValues={{
               fullName: user.fullName,
               collegeName: user.collegeName,
+              email: user.email,
               phoneNumber: user.phoneNumber,
               bio: user.bio ?? "",
               city: user.city ?? "",
               graduationYear: user.graduationYear ?? undefined,
+              avatar: user.avatar ?? "",
             }}
           />
         </GlassCard>

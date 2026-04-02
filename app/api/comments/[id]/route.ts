@@ -15,7 +15,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
   // Admin OR Club Header of the post's club OR the comment author
   const isAdmin = user.role === "ADMIN";
-  const isClubHeader = user.role === "CLUB_HEADER" && comment.post.club.managedById === user.id;
+  const isClubHeader = user.role === "CLUB_HEADER" && comment.post.club.headerId === user.id;
   const isAuthor = comment.userId === user.id;
 
   if (!isAdmin && !isClubHeader && !isAuthor) {

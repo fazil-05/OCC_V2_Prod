@@ -17,16 +17,47 @@ export async function PATCH(_req: NextRequest, { params }: { params: { id: strin
     return NextResponse.json({ error: "Not a pending club header application" }, { status: 400 });
   }
 
-  let code = generateReferralCode(target.clubManaged?.name || "CLB", target.fullName);
+  const club =
+    (target.pendingLeadClubId
+      ? await prisma.club.findUnique({ where: { id: target.pendingLeadClubId } })
+      : null) ??
+    (await prisma.club.findFirst({ where: { headerId: target.id } }));
+
+  if (!club) {
+    return NextResponse.json(
+      { error: "Could not resolve which club this application is for." },
+      { status: 400 }
+    );
+  }
+
+  let code = generateReferralCode(club.name || "CLB", target.fullName);
   for (let i = 0; i < 8; i++) {
     const exists = await prisma.user.findUnique({ where: { referralCode: code } });
     if (!exists) break;
-    code = generateReferralCode(target.clubManaged?.name || "CLB", target.fullName);
+    code = generateReferralCode(club.name || "CLB", target.fullName);
   }
 
-  await prisma.user.update({
-    where: { id: target.id },
-    data: { approvalStatus: "APPROVED", referralCode: code },
+  await prisma.$transaction(async (tx) => {
+    if (club.headerId && club.headerId !== target.id) {
+      await tx.user.update({
+        where: { id: club.headerId },
+        data: { role: "STUDENT", referralCode: null },
+      });
+    }
+
+    await tx.club.update({
+      where: { id: club.id },
+      data: { headerId: target.id },
+    });
+
+    await tx.user.update({
+      where: { id: target.id },
+      data: {
+        approvalStatus: "APPROVED",
+        referralCode: code,
+        pendingLeadClubId: null,
+      },
+    });
   });
 
   await prisma.notification.create({
@@ -39,7 +70,6 @@ export async function PATCH(_req: NextRequest, { params }: { params: { id: strin
     },
   });
 
-  // Real-time notification (non-blocking — don't crash if Pusher isn't configured)
   try {
     await pusherServer.trigger(`user-${target.id}`, "approved", {
       referralCode: code,

@@ -1,52 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { OCC_DEFAULT_CLUBS } from "../src/lib/occDefaultClubs";
 
 const prisma = new PrismaClient();
-
-const clubs = [
-  {
-    slug: "bikers",
-    name: "Bikers",
-    icon: "🏍",
-    description: "Weekend rides, bike checks, mountain roads.",
-    theme: "amber",
-  },
-  {
-    slug: "music",
-    name: "Music",
-    icon: "🎵",
-    description: "Open mics, studio sessions, collabs.",
-    theme: "purple",
-  },
-  {
-    slug: "sports",
-    name: "Sports Football",
-    icon: "⚽",
-    description: "Tournaments, turf bookings, weekly matches.",
-    theme: "green",
-  },
-  {
-    slug: "photography",
-    name: "Photography",
-    icon: "📷",
-    description: "Photo walks, exhibitions, paid shoots.",
-    theme: "blue",
-  },
-  {
-    slug: "fitness",
-    name: "Fitness",
-    icon: "💪",
-    description: "Group workouts, nutrition, challenges.",
-    theme: "charcoal",
-  },
-  {
-    slug: "fashion",
-    name: "Fashion",
-    icon: "👗",
-    description: "Showcases, brand deals, styling.",
-    theme: "rose",
-  },
-];
 
 async function main() {
   const staffEmail = process.env.OCC_STAFF_ADMIN_EMAIL || "occ-staff-r8k2@occ-local.dev";
@@ -70,7 +26,7 @@ async function main() {
     },
   });
 
-  for (const club of clubs) {
+  for (const club of OCC_DEFAULT_CLUBS) {
     await prisma.club.upsert({
       where: { slug: club.slug },
       update: {},

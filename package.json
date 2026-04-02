@@ -49,6 +49,7 @@
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",
     "@studio-freight/lenis": "^1.0.42",
+    "@vercel/blob": "^2.3.3",
     "bcryptjs": "^3.0.2",
     "canvas-confetti": "1.9.4",
     "class-variance-authority": "0.7.1",

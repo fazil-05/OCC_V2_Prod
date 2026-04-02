@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth";
+import { avatarSrc } from "@/lib/avatar";
 import { AlertOctagon, Trash2, CheckCircle2, MessageSquare, User, Calendar, Flag } from "lucide-react";
 import Image from "next/image";
 
@@ -84,7 +85,7 @@ export default async function AdminReportsPage() {
                       </span>
                       <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.03] border border-white/[0.05]">
                         <div className="h-8 w-8 rounded-full overflow-hidden border border-white/10">
-                          <img src={report.reporter.avatar || "/default-avatar.png"} alt="Reporter" className="h-full w-full object-cover" />
+                          <img src={avatarSrc(report.reporter.avatar)} alt="Reporter" className="h-full w-full object-cover" />
                         </div>
                         <div className="flex flex-col">
                           <span className="text-xs font-bold text-white">{report.reporter.fullName}</span>
@@ -104,7 +105,7 @@ export default async function AdminReportsPage() {
                     <div className="p-6 rounded-[2rem] bg-white/[0.05] border border-white/[0.08] relative group/content shadow-inner">
                       <div className="flex items-start gap-4 mb-4">
                          <div className="h-10 w-10 rounded-full overflow-hidden ring-2 ring-[#5227FF]/20">
-                          <img src={report.comment.user.avatar || "/default-avatar.png"} alt="Commenter" className="h-full w-full object-cover" />
+                          <img src={avatarSrc(report.comment.user.avatar)} alt="Commenter" className="h-full w-full object-cover" />
                         </div>
                         <div className="flex flex-col">
                           <span className="text-sm font-black text-white tracking-tight">{report.comment.user.fullName}</span>

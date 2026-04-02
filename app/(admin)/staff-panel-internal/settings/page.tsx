@@ -11,6 +11,7 @@ export default function AdminSettingsPage() {
       !!process.env.NEXT_PUBLIC_PUSHER_KEY,
     email: !!(process.env.RESEND_API_KEY || process.env.SMTP_HOST),
     uploadthing: !!process.env.UPLOADTHING_SECRET,
+    vercelBlob: !!process.env.BLOB_READ_WRITE_TOKEN,
   };
 
   const rows: { label: string; ok: boolean; detail: string }[] = [
@@ -18,6 +19,7 @@ export default function AdminSettingsPage() {
     { label: "Realtime (Pusher)", ok: env.pusher, detail: "PUSHER_* + NEXT_PUBLIC_PUSHER_*" },
     { label: "Email (Resend / SMTP)", ok: env.email, detail: "RESEND_API_KEY or SMTP_*" },
     { label: "Uploadthing", ok: env.uploadthing, detail: "UPLOADTHING_SECRET" },
+    { label: "Profile avatars (Vercel Blob)", ok: env.vercelBlob, detail: "BLOB_READ_WRITE_TOKEN" },
   ];
 
   return (

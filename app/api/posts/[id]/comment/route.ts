@@ -31,7 +31,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     include: { club: true }
   });
 
-  const isPrivileged = user.role === "ADMIN" || (user.role === "CLUB_HEADER" && post?.club.managedById === user.id);
+  const isPrivileged = user.role === "ADMIN" || (user.role === "CLUB_HEADER" && post?.club.headerId === user.id);
 
   const sanitizedComments = comments.map(c => ({
     id: c.id,

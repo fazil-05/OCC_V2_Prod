@@ -28,6 +28,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         role: "STUDENT",
         referralCode: null,
         clubManagedId: null,
+        pendingLeadClubId: null,
       },
     }),
   ]);

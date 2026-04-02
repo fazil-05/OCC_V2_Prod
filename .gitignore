@@ -13,3 +13,6 @@ public/bikers-frames/
 public/photography-frames/
 public/fashion-frames/
 public/football-frames/
+
+# Local user uploads (dev only; production uses Vercel Blob when configured)
+public/uploads/

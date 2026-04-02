@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
+import { avatarSrc } from "@/lib/avatar";
 import { pusherClient } from "@/lib/pusher";
 
 export type OCCPost = {
@@ -280,7 +281,7 @@ export function OCCPostCard({ post }: { post: OCCPost }) {
                       {comments.map((comment) => (
                         <div key={comment.id} className="group/comment">
                           <div className="flex gap-3 sm:gap-4">
-                            <img src={comment.user.avatar || "/default-avatar.png"} className="h-8 w-8 sm:h-10 sm:w-10 rounded-full object-cover shrink-0 ring-1 ring-black/5" />
+                            <img src={avatarSrc(comment.user.avatar)} alt="" className="h-8 w-8 sm:h-10 sm:w-10 rounded-full object-cover shrink-0 ring-1 ring-black/5" />
                             <div className="flex-1 flex flex-col gap-1 sm:gap-1.5">
                               <div className="flex items-center justify-between">
                                 <span className="text-[11px] sm:text-[12px] font-bold text-black">{comment.user.fullName}</span>

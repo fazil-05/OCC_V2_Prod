@@ -44,6 +44,8 @@ model User {
   referrer               User?               @relation("ReferralRelation", fields: [referredBy], references: [id])
   referrals              User[]              @relation("ReferralRelation")
   commentReports         CommentReport[]
+  pendingLeadClubId      String?
+  pendingLeadClub        Club?               @relation("PendingLeadApplicants", fields: [pendingLeadClubId], references: [id], onDelete: SetNull)
 
   @@map("users")
 }
@@ -66,6 +68,7 @@ model Club {
   events        Event[]
   posts         Post[]
   referralStats ReferralStat[]
+  pendingLeadApplicants User[] @relation("PendingLeadApplicants")
 
   @@map("clubs")
 }

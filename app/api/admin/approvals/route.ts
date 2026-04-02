@@ -6,11 +6,31 @@ export async function GET() {
   const user = await requireAdminApi();
   if (user instanceof NextResponse) return user;
 
-  const approvals = await prisma.user.findMany({
+  const rows = await prisma.user.findMany({
     where: { role: "CLUB_HEADER", approvalStatus: "PENDING" },
     orderBy: { createdAt: "desc" },
-    include: { clubManaged: true },
+    include: {
+      clubManaged: true,
+      pendingLeadClub: { select: { name: true, slug: true, icon: true } },
+    },
   });
+
+  const approvals = rows.map((a) => ({
+    ...a,
+    clubManaged: a.clubManaged
+      ? {
+          name: a.clubManaged.name,
+          slug: a.clubManaged.slug,
+          icon: a.clubManaged.icon,
+        }
+      : a.pendingLeadClub
+        ? {
+            name: a.pendingLeadClub.name,
+            slug: a.pendingLeadClub.slug,
+            icon: a.pendingLeadClub.icon,
+          }
+        : null,
+  }));
 
   return NextResponse.json({ approvals });
 }

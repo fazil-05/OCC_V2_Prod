@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-import crypto from "crypto";
+import { z, ZodError } from "zod";
 import { prisma } from "@/lib/prisma";
 import { generateSixDigitOtp, sha256Hex } from "@/lib/otp";
 import { sendOtpEmail } from "@/lib/smtp";
@@ -65,6 +64,13 @@ export async function POST(req: NextRequest) {
     // Do not reveal whether email exists.
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { error: error.issues[0]?.message ?? "Invalid email" },
+        { status: 400 },
+      );
+    }
+    console.error("[register/send-otp]", error);
     return NextResponse.json({ error: "OTP send failed" }, { status: 500 });
   }
 }

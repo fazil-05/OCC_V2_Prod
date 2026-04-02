@@ -1,8 +1,9 @@
+import { put } from "@vercel/blob";
+import { randomUUID } from "crypto";
+import { mkdir, writeFile } from "fs/promises";
+import { join } from "path";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { randomUUID } from "crypto";
 
 export async function POST(req: NextRequest) {
   const user = await getSessionUser();
@@ -17,22 +18,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No valid image file provided" }, { status: 400 });
   }
 
-  // Max 5MB
   if (file.size > 5 * 1024 * 1024) {
     return NextResponse.json({ error: "File too large (max 5MB)" }, { status: 400 });
   }
 
-  const ext = file.name.split(".").pop() || "jpg";
-  const fileName = `${randomUUID()}.${ext}`;
+  const ext = file.name.split(".").pop()?.replace(/[^a-z0-9]/gi, "") || "jpg";
+  const fileName = `avatars/${user.id}/${randomUUID()}.${ext}`;
 
-  const uploadDir = join(process.cwd(), "public", "uploads");
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    const blob = await put(fileName, file, {
+      access: "public",
+      addRandomSuffix: true,
+    });
+    return NextResponse.json({ success: true, url: blob.url });
+  }
+
+  const shortName = `${randomUUID()}.${ext}`;
+  const uploadDir = join(process.cwd(), "public", "uploads", user.id);
   await mkdir(uploadDir, { recursive: true });
 
   const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
-  await writeFile(join(uploadDir, fileName), buffer);
+  await writeFile(join(uploadDir, shortName), Buffer.from(bytes));
 
-  const url = `/uploads/${fileName}`;
-
+  const url = `/uploads/${user.id}/${shortName}`;
   return NextResponse.json({ success: true, url });
 }

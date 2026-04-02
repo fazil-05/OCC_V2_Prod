@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/app/components/ui/input-otp";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -13,10 +14,39 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [otpHint, setOtpHint] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [referralCode, setReferralCode] = useState("");
   const [referralMeta, setReferralMeta] = useState<{ valid: boolean; club?: { name: string }; headerName?: string } | null>(null);
+
+  const sendVerificationCode = async () => {
+    setError("");
+    setOtpHint(null);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError("Enter a valid email before requesting a code.");
+      return;
+    }
+    setSendingOtp(true);
+    try {
+      const res = await fetch("/api/auth/register/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      if (!res.ok) {
+        setError("Could not send verification email. Check SMTP settings or try again.");
+        return;
+      }
+      setOtpHint("Check your inbox for a 6-digit code (valid ~10 minutes).");
+    } catch {
+      setError("Could not send verification email. Try again.");
+    } finally {
+      setSendingOtp(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,8 +57,25 @@ export default function RegisterPage() {
       return;
     }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+    if (!/[A-Z]/.test(password)) {
+      setError("Password must include an uppercase letter");
+      return;
+    }
+    if (!/[a-z]/.test(password)) {
+      setError("Password must include a lowercase letter");
+      return;
+    }
+    if (!/\d/.test(password)) {
+      setError("Password must include a number");
+      return;
+    }
+
+    if (!/^\d{6}$/.test(otp)) {
+      setError('Enter the 6-digit code from your email (tap "Send verification code" first).');
       return;
     }
 
@@ -40,11 +87,12 @@ export default function RegisterPage() {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          fullName: name,
-          email,
+          fullName: name.trim(),
+          email: email.trim(),
           password,
           confirmPassword,
-          referralCode,
+          otp,
+          referralCode: referralCode.trim() || undefined,
         }),
       });
 
@@ -167,7 +215,7 @@ export default function RegisterPage() {
           </div>
 
           {/* Email Input */}
-          <div>
+          <div className="space-y-2">
             <input
               type="email"
               placeholder="Your email"
@@ -176,6 +224,36 @@ export default function RegisterPage() {
               required
               className="w-full px-4 py-3.5 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
             />
+            <button
+              type="button"
+              onClick={() => void sendVerificationCode()}
+              disabled={sendingOtp}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 bg-gray-50 py-3 text-sm font-semibold text-gray-800 transition hover:bg-gray-100 disabled:opacity-50"
+            >
+              {sendingOtp ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Mail className="h-4 w-4" />
+              )}
+              Send verification code
+            </button>
+            {otpHint ? <p className="text-xs text-green-700">{otpHint}</p> : null}
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-gray-600">Email verification code</label>
+            <InputOTP
+              maxLength={6}
+              value={otp}
+              onChange={(v) => setOtp(v.replace(/\D/g, ""))}
+              containerClassName="justify-center gap-2"
+            >
+              <InputOTPGroup>
+                {Array.from({ length: 6 }, (_, i) => (
+                  <InputOTPSlot key={i} index={i} className="h-11 w-10 rounded-lg border border-gray-300 text-gray-900" />
+                ))}
+              </InputOTPGroup>
+            </InputOTP>
           </div>
 
           <div>

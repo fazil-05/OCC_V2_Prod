@@ -1,11 +1,12 @@
 "use client";
 
-import { Bell, Search, ChevronDown, Sparkles, LayoutGrid } from "lucide-react";
+import { Bell, Search, ChevronDown, Sparkles, LayoutGrid, User, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { avatarSrc } from "@/lib/avatar";
 import { useLogout } from "@/hooks/useLogout";
-import { LogOut } from "lucide-react";
 
 export function OCCHeader({ user }: { user: any }) {
   const [isFocused, setIsFocused] = useState(false);
@@ -92,7 +93,7 @@ export function OCCHeader({ user }: { user: any }) {
             <div className={`h-8 w-8 sm:h-12 sm:w-12 overflow-hidden rounded-full ring-2 shadow-lg transition-all ${isProfileOpen ? 'ring-[#5227FF]/50' : 'ring-white group-hover:ring-[#D4AF37]/20'}`}>
               <img
                 alt="Profile"
-                src={user.avatar || "/default-avatar.png"}
+                src={avatarSrc(user.avatar)}
                 className="h-full w-full object-cover"
               />
             </div>
@@ -114,6 +115,14 @@ export function OCCHeader({ user }: { user: any }) {
                 <p className="text-sm font-black text-black">{user.fullName}</p>
                 <p className="text-[10px] font-bold text-black/40 uppercase tracking-wider">{user.email}</p>
               </div>
+              <Link
+                href="/profile"
+                className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-black/[0.04] text-black transition-all font-bold text-sm"
+                onClick={() => setIsProfileOpen(false)}
+              >
+                <User className="h-4 w-4" />
+                Edit profile
+              </Link>
               <button
                 onClick={logout}
                 className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-red-50 text-red-500 transition-all font-bold text-sm"
