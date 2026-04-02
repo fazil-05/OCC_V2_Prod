@@ -1,6 +1,11 @@
+"use client";
+
 import React, { useRef, useState } from 'react';
 import { motion, useSpring } from 'motion/react';
 import { MovableBlock } from './LayoutEditor';
+
+const CARD_W = 560;
+const CARD_H = 380;
 
 interface ConnectorPiece {
   id: number;
@@ -59,15 +64,13 @@ export function FloatingConnectorsCard() {
   };
 
   return (
-    <div className="flex items-center justify-center p-8 bg-gradient-to-br from-slate-900 to-slate-950">
+    <div className="flex items-center justify-center p-4 sm:p-6 md:p-8 bg-gradient-to-br from-slate-900 to-slate-950">
       <motion.div
         ref={cardRef}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
-        className="relative overflow-hidden rounded-2xl cursor-none"
+        className="relative aspect-[560/380] w-full max-w-[560px] overflow-hidden rounded-2xl cursor-none"
         style={{
-          width: '760px',
-          height: '520px',
           background: '#080C14',
           perspective: '1200px',
         }}
@@ -119,7 +122,7 @@ export function FloatingConnectorsCard() {
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <MovableBlock id="floating-card-center-letter" className="pointer-events-none">
             <motion.div
-              className="text-[240px] font-black leading-none text-white"
+              className="font-black leading-none text-white text-[clamp(4.5rem,22vw,10.9375rem)]"
               style={{
                 fontFamily: 'Impact, "Arial Black", sans-serif',
                 letterSpacing: '-0.05em',
@@ -148,8 +151,8 @@ export function FloatingConnectorsCard() {
               top: 0,
             }}
             animate={{
-              x: (mousePosition.x * 0.5 + 0.5) * 760 - 12,
-              y: (mousePosition.y * 0.5 + 0.5) * 520 - 12,
+              x: (mousePosition.x * 0.5 + 0.5) * CARD_W - 12,
+              y: (mousePosition.y * 0.5 + 0.5) * CARD_H - 12,
             }}
             transition={{
               type: 'spring',

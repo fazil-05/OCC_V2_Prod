@@ -1,6 +1,11 @@
+"use client";
+
 import React, { useRef, useState } from 'react';
 import { motion, useSpring } from 'motion/react';
 import { MovableBlock } from './LayoutEditor';
+
+const CARD_W = 560;
+const CARD_H = 380;
 
 export function ChromeKnotCard() {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -28,15 +33,13 @@ export function ChromeKnotCard() {
   };
 
   return (
-    <div className="flex items-center justify-center p-8 bg-gradient-to-br from-slate-900 to-slate-950">
+    <div className="flex items-center justify-center p-4 sm:p-6 md:p-8 bg-gradient-to-br from-slate-900 to-slate-950">
       <motion.div
         ref={cardRef}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
-        className="relative overflow-hidden rounded-[20px] border border-white/8"
+        className="relative aspect-[560/380] w-full max-w-[560px] overflow-hidden rounded-[20px] border border-white/8"
         style={{
-          width: '760px',
-          height: '520px',
           background: '#0A0A0F',
           perspective: '1200px',
         }}
@@ -120,8 +123,8 @@ export function ChromeKnotCard() {
               top: 0,
             }}
             animate={{
-              x: (mousePosition.x * 0.5 + 0.5) * 760 - 16,
-              y: (mousePosition.y * 0.5 + 0.5) * 520 - 16,
+              x: (mousePosition.x * 0.5 + 0.5) * CARD_W - 16,
+              y: (mousePosition.y * 0.5 + 0.5) * CARD_H - 16,
             }}
             transition={{
               type: 'spring',

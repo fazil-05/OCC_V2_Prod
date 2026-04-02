@@ -1,9 +1,13 @@
 import React from "react";
 import { Activity } from "lucide-react";
 import { motion } from "motion/react";
+import { useNavigate } from "react-router";
 import { MovableBlock } from "./LayoutEditor";
+import { navigateForAuth } from "@/lib/client-auth-redirect";
 
 export function Header() {
+  const navigate = useNavigate();
+
   return (
     <motion.header
       initial={{ opacity: 0, y: -20 }}
@@ -30,6 +34,7 @@ export function Header() {
         <MovableBlock id="header-join-club-btn">
           <button
             type="button"
+            onClick={() => navigateForAuth(navigate, "/register", "/register")}
             className="flex items-center justify-center rounded-full bg-slate-800 px-5 py-2.5 text-xs font-semibold tracking-wider text-white backdrop-blur-md transition-colors hover:bg-slate-900"
           >
             JOIN A CLUB{" "}
@@ -39,6 +44,7 @@ export function Header() {
         <MovableBlock id="header-clubs-btn">
           <button
             type="button"
+            onClick={() => navigateForAuth(navigate, "/clubs", "/login")}
             className="flex items-center justify-center rounded-full bg-slate-200/50 px-5 py-2.5 text-xs font-semibold tracking-wider text-slate-900 backdrop-blur-md transition-colors hover:bg-slate-200"
           >
             CLUBS{" "}

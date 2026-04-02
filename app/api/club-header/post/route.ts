@@ -1,0 +1,33 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getSessionUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { postCreateSchema } from "@/lib/validations";
+import { pusherServer } from "@/lib/pusher";
+
+export async function POST(req: NextRequest) {
+  const user = await getSessionUser();
+  if (!user || user.role !== "CLUB_HEADER" || user.approvalStatus !== "APPROVED") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await req.json();
+  const parsed = postCreateSchema.parse(body);
+  const clubId = user.clubManaged?.id || parsed.clubId;
+  if (!clubId) return NextResponse.json({ error: "No club assigned" }, { status: 400 });
+
+  const post = await prisma.post.create({
+    data: {
+      userId: user.id,
+      clubId,
+      imageUrl: parsed.imageUrl,
+      imageUrls: parsed.imageUrls || [],
+      caption: parsed.caption,
+      content: parsed.content,
+      type: parsed.type || "post",
+    },
+    include: { user: true, club: true },
+  });
+
+  await pusherServer.trigger(`club-${clubId}`, "new-post", { post });
+  return NextResponse.json({ success: true, post }, { status: 201 });
+}

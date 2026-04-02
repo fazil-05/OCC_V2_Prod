@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useCallback, useRef } from "react";
 import { motion, useReducedMotion, useSpring } from "motion/react";
 import { useNavigate } from "react-router";
@@ -127,12 +129,6 @@ const clubs: {
     title: "Fashion",
     tags: "CREATIVE MEETS • OUTFIT BUILDS • AI SUGGESTS",
     image: u("photo-1469334031218-e382a71b716b"),
-  },
-  {
-    title: "Entrepreneurship (E-Cell)",
-    tags: "COMING SOON — BEING ADDED LATER",
-    image: u("photo-1522071820081-009f0129c71c"),
-    comingSoon: true,
   },
 ];
 

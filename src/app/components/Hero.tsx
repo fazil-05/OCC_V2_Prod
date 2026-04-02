@@ -1,14 +1,19 @@
 import React from "react";
 import { motion } from "motion/react";
+import { useNavigate } from "react-router";
 import { MovableBlock } from "./LayoutEditor";
 import LiquidEther from "./LiquidEther";
+import { navigateForAuth } from "@/lib/client-auth-redirect";
 
 const HERO_VIDEO_SRC =
   "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260217_030345_246c0224-10a4-422c-b324-070b7c0eceda.mp4";
 
-const HERO_CARD_VIDEO_SRC = "/Night_Event_Crowd_Video_Generation.mp4";
+/** Framed hero card — add `public/videos/occ-hero-card.mp4` to the repo (same-origin, reliable playback). */
+const HERO_CARD_VIDEO_SRC = "/videos/occ-hero-card.mp4";
 
 export function Hero() {
+  const navigate = useNavigate();
+
   return (
     <>
       {/* Fullscreen campus-night video + dim — fixed until covered by sections below */}
@@ -20,6 +25,7 @@ export function Hero() {
           muted
           loop
           playsInline
+          preload="metadata"
         />
         <div className="absolute inset-0 bg-black/50" />
       </div>
@@ -89,16 +95,17 @@ export function Hero() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 1, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              className="relative aspect-video w-full max-w-[min(100%,17rem)] overflow-hidden rounded-[2rem] bg-white/5 shadow-2xl shadow-black/40 ring-1 ring-white/10 backdrop-blur-[2px] sm:max-w-[22rem] md:max-w-xl lg:max-w-2xl xl:max-w-2xl"
+              className="relative aspect-video w-full max-w-[min(100%,17rem)] overflow-hidden rounded-[2rem] bg-black/20 shadow-2xl shadow-black/40 ring-1 ring-white/10 backdrop-blur-[2px] transform-gpu sm:max-w-[22rem] md:max-w-xl lg:max-w-2xl xl:max-w-2xl"
             >
               <video
-                className="absolute inset-0 h-full w-full object-cover object-center"
+                className="pointer-events-none absolute inset-0 h-full w-full object-cover"
                 src={HERO_CARD_VIDEO_SRC}
                 autoPlay
                 muted
                 loop
                 playsInline
-                aria-label="OCC night event and crowd"
+                preload="auto"
+                aria-label="OCC hero preview video"
               />
             </motion.div>
           </MovableBlock>
@@ -118,7 +125,10 @@ export function Hero() {
             <span>+</span>
           </MovableBlock>
           <MovableBlock id="hero-footer-cta" className="shrink-0 px-2">
-            <span className="cursor-pointer transition-colors hover:text-white">
+            <span
+              className="cursor-pointer transition-colors hover:text-white"
+              onClick={() => navigateForAuth(navigate, "/clubs", "/register")}
+            >
               Find your club below
             </span>
           </MovableBlock>

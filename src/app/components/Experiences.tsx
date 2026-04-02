@@ -24,20 +24,17 @@ export function Experiences() {
         </svg>
       </MovableBlock>
 
-      <div className="relative z-10 mx-auto mb-24 mt-12 w-full max-w-[90rem] md:mb-32 lg:mb-40">
+      <div className="relative z-10 mx-auto mb-16 mt-8 w-full max-w-[90rem] md:mb-24 md:mt-10 lg:mb-28">
         <MovableBlock id="experiences-title">
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.8 }}
+            className="w-full"
           >
-            <h2 className="text-[2.75rem] font-medium leading-[0.92] tracking-tighter text-slate-900 sm:text-[4.5rem] md:text-[6rem] lg:text-[8rem] xl:text-[9rem]">
-              Events, gigs,
-              <br />
-              and matchups
-              <br />
-              that hit different
+            <h2 className="text-left text-[1.125rem] font-medium leading-snug tracking-tighter text-slate-900 sm:text-[1.35rem] md:whitespace-nowrap md:text-[1.65rem] lg:text-[1.85rem] xl:text-[2rem]">
+              Events, gigs, and matchups that hit different
             </h2>
           </motion.div>
         </MovableBlock>

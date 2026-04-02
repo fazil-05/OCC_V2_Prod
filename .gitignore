@@ -1,7 +1,12 @@
 node_modules
 dist
+.next
+tmp
+*.tsbuildinfo
 .env.local
+.env
 .env*.local
+Untitled
 
 # Frame JPEG sequences (hosted on R2; do not commit thousands of images)
 public/bikers-frames/

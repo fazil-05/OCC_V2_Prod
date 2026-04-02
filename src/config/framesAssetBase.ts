@@ -4,7 +4,17 @@
  * Production: set VITE_FRAMES_CDN_BASE=https://pub-xxxxx.r2.dev (no trailing slash).
  */
 export function framesPublicPath(pathFromRoot: string): string {
-  const base = import.meta.env.VITE_FRAMES_CDN_BASE?.trim().replace(/\/$/, "") ?? "";
+  // Next.js doesn't provide `import.meta.env` like Vite during SSR/prerender.
+  // Prefer Next-exposed env vars, but keep compatibility with Vite-style naming.
+  const viteBase = (import.meta as any)?.env?.VITE_FRAMES_CDN_BASE as string | undefined;
+  const processBase =
+    process.env.NEXT_PUBLIC_FRAMES_CDN_BASE ??
+    process.env.VITE_FRAMES_CDN_BASE ??
+    undefined;
+
+  const base = String(processBase ?? viteBase ?? "")
+    .trim()
+    .replace(/\/$/, "");
   const path = pathFromRoot.startsWith("/") ? pathFromRoot : `/${pathFromRoot}`;
   if (!base) return path;
   return `${base}${path}`;
