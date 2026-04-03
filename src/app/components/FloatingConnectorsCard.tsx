@@ -1,49 +1,26 @@
 "use client";
 
-import React, { useRef, useState } from 'react';
-import { motion, useSpring } from 'motion/react';
-import { MovableBlock } from './LayoutEditor';
+import React, { useRef, useState, useEffect } from "react";
+import { motion, AnimatePresence, useSpring } from "motion/react";
 
-const CARD_W = 560;
-const CARD_H = 380;
-
-interface ConnectorPiece {
-  id: number;
-  x: number;
-  y: number;
-  z: number;
-  rotation: { x: number; y: number; z: number };
-  scale: number;
-  color: 'blue' | 'white';
-}
+const IMAGES = [
+  "/1775026121637.jpg",
+  "/file_00000000c25c720ba27a68ebfd16e397.png",
+];
 
 export function FloatingConnectorsCard() {
   const cardRef = useRef<HTMLDivElement>(null);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  
-  // Spring physics for smooth cursor tracking
-  const mouseX = useSpring(0, { stiffness: 80, damping: 75 });
-  const mouseY = useSpring(0, { stiffness: 80, damping: 75 });
+  const [current, setCurrent] = useState(0);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
-  // Generate random floating connector pieces
-  const connectors: ConnectorPiece[] = React.useMemo(() => {
-    const pieces: ConnectorPiece[] = [];
-    for (let i = 0; i < 18; i++) {
-      pieces.push({
-        id: i,
-        x: Math.random() * 100 - 50,
-        y: Math.random() * 100 - 50,
-        z: Math.random() * 200 - 100,
-        rotation: {
-          x: Math.random() * 360,
-          y: Math.random() * 360,
-          z: Math.random() * 360,
-        },
-        scale: 0.6 + Math.random() * 0.8,
-        color: Math.random() > 0.5 ? 'blue' : 'white',
-      });
-    }
-    return pieces;
+  const rotateX = useSpring(0, { stiffness: 120, damping: 30 });
+  const rotateY = useSpring(0, { stiffness: 120, damping: 30 });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrent((prev) => (prev + 1) % IMAGES.length);
+    }, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -51,16 +28,15 @@ export function FloatingConnectorsCard() {
     const rect = cardRef.current.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
     const y = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
-    
-    mouseX.set(x);
-    mouseY.set(y);
-    setMousePosition({ x, y });
+    setMousePos({ x, y });
+    rotateY.set(x * 8);
+    rotateX.set(-y * 8);
   };
 
   const handleMouseLeave = () => {
-    mouseX.set(0);
-    mouseY.set(0);
-    setMousePosition({ x: 0, y: 0 });
+    setMousePos({ x: 0, y: 0 });
+    rotateX.set(0);
+    rotateY.set(0);
   };
 
   return (
@@ -69,174 +45,52 @@ export function FloatingConnectorsCard() {
         ref={cardRef}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
-        className="relative aspect-[560/380] w-full max-w-[560px] overflow-hidden rounded-2xl cursor-none"
+        onClick={() => setCurrent((prev) => (prev + 1) % IMAGES.length)}
+        className="relative w-full max-w-[720px] overflow-hidden rounded-[20px] border border-white/8 cursor-pointer"
         style={{
-          background: '#080C14',
-          perspective: '1200px',
+          perspective: "1200px",
+          rotateX,
+          rotateY,
         }}
       >
-        {/* 3D Scene Container */}
-        <div className="absolute inset-0" style={{ transformStyle: 'preserve-3d' }}>
-          {/* Floating Connector Pieces */}
-          {connectors.map((piece, index) => {
-            const depth = (piece.z + 100) / 200; // 0 to 1, closer = larger value
-            const parallaxStrength = 1 - depth * 0.5; // Closer pieces move more
-            
-            return (
-              <motion.div
-                key={piece.id}
-                className="absolute"
-                style={{
-                  left: `calc(50% + ${piece.x}%)`,
-                  top: `calc(50% + ${piece.y}%)`,
-                  transform: 'translate(-50%, -50%)',
-                  transformStyle: 'preserve-3d',
-                }}
-                animate={{
-                  x: -mousePosition.x * 40 * parallaxStrength,
-                  y: -mousePosition.y * 40 * parallaxStrength,
-                  scale: 1 + (depth > 0.7 ? 0.04 : 0), // Pop effect for foreground pieces
-                  rotateX: mousePosition.y * 10 * parallaxStrength,
-                  rotateY: mousePosition.x * 10 * parallaxStrength,
-                  rotateZ: piece.rotation.z + mousePosition.x * 5,
-                }}
-                transition={{
-                  type: 'spring',
-                  stiffness: 80,
-                  damping: 75,
-                  delay: index * 0.008,
-                }}
-              >
-                {/* Cross-shaped connector piece */}
-                <ConnectorCross 
-                  color={piece.color} 
-                  scale={piece.scale * (0.8 + depth * 0.6)}
-                  rotation={piece.rotation}
-                />
-              </motion.div>
-            );
-          })}
-        </div>
-
-        {/* Center "L" Letterform Overlay */}
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <MovableBlock id="floating-card-center-letter" className="pointer-events-none">
-            <motion.div
-              className="font-black leading-none text-white text-[clamp(4.5rem,22vw,10.9375rem)]"
-              style={{
-                fontFamily: 'Impact, "Arial Black", sans-serif',
-                letterSpacing: '-0.05em',
-                textShadow: '0 4px 20px rgba(0,0,0,0.5)',
-              }}
-              animate={{
-                scale: 1 + Math.abs(mousePosition.x) * 0.02,
-              }}
-              transition={{
-                type: 'spring',
-                stiffness: 100,
-                damping: 30,
-              }}
-            >
-              L
-            </motion.div>
-          </MovableBlock>
-        </div>
-
-        {/* Cursor follower */}
-        {mousePosition.x !== 0 && (
-          <motion.div
-            className="absolute w-6 h-6 rounded-full bg-white/20 backdrop-blur-sm pointer-events-none border border-white/40"
-            style={{
-              left: 0,
-              top: 0,
-            }}
-            animate={{
-              x: (mousePosition.x * 0.5 + 0.5) * CARD_W - 12,
-              y: (mousePosition.y * 0.5 + 0.5) * CARD_H - 12,
-            }}
-            transition={{
-              type: 'spring',
-              stiffness: 200,
-              damping: 20,
-            }}
+        <AnimatePresence mode="wait">
+          <motion.img
+            key={current}
+            src={IMAGES[current]}
+            alt="OCC showcase"
+            initial={{ opacity: 0, scale: 1.05 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.6, ease: "easeInOut" }}
+            className="block w-full h-auto object-cover"
+            draggable={false}
           />
-        )}
-      </motion.div>
-    </div>
-  );
-}
+        </AnimatePresence>
 
-// Cross-shaped connector component
-function ConnectorCross({ 
-  color, 
-  scale, 
-  rotation 
-}: { 
-  color: 'blue' | 'white'; 
-  scale: number;
-  rotation: { x: number; y: number; z: number };
-}) {
-  const baseSize = 40 * scale;
-  const thickness = 12 * scale;
-  
-  const colorStyles = color === 'blue' 
-    ? 'bg-[#2B4BFF]' 
-    : 'bg-gradient-to-br from-white/80 to-gray-300/60';
-  
-  return (
-    <div
-      className="relative"
-      style={{
-        width: baseSize,
-        height: baseSize,
-        transformStyle: 'preserve-3d',
-        transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg) rotateZ(${rotation.z}deg)`,
-      }}
-    >
-      {/* Horizontal bar */}
-      <div
-        className={`absolute ${colorStyles} rounded-sm`}
-        style={{
-          width: baseSize,
-          height: thickness,
-          top: '50%',
-          left: 0,
-          transform: 'translateY(-50%)',
-          boxShadow: color === 'blue' 
-            ? '0 2px 8px rgba(43, 75, 255, 0.4)' 
-            : '0 2px 8px rgba(255, 255, 255, 0.3)',
-        }}
-      />
-      
-      {/* Vertical bar */}
-      <div
-        className={`absolute ${colorStyles} rounded-sm`}
-        style={{
-          width: thickness,
-          height: baseSize,
-          top: 0,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          boxShadow: color === 'blue' 
-            ? '0 2px 8px rgba(43, 75, 255, 0.4)' 
-            : '0 2px 8px rgba(255, 255, 255, 0.3)',
-        }}
-      />
-      
-      {/* Depth piece - creates 3D junction effect */}
-      <div
-        className={`absolute ${colorStyles} rounded-sm`}
-        style={{
-          width: thickness,
-          height: thickness,
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%) translateZ(6px)',
-          boxShadow: color === 'blue' 
-            ? '0 0 12px rgba(43, 75, 255, 0.6)' 
-            : '0 0 12px rgba(255, 255, 255, 0.4)',
-        }}
-      />
+        <motion.div
+          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"
+          animate={{
+            backgroundPosition: `${50 + mousePos.x * 10}% ${50 + mousePos.y * 10}%`,
+          }}
+        />
+
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+          {IMAGES.map((_, i) => (
+            <button
+              key={i}
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrent(i);
+              }}
+              className={`h-2 rounded-full transition-all duration-300 ${
+                i === current
+                  ? "w-6 bg-white"
+                  : "w-2 bg-white/40 hover:bg-white/60"
+              }`}
+            />
+          ))}
+        </div>
+      </motion.div>
     </div>
   );
 }
