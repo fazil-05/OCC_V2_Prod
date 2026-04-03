@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, Plus, Sparkles, Users } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { pusherClient } from "@/lib/pusher";
@@ -127,9 +127,12 @@ export function OCCTrendingClubs({ clubs }: { clubs: OCCTrendingClub[] }) {
           </button>
         </div>
 
-        <div 
+        <motion.div 
           ref={scrollRef}
-          className="flex items-center gap-4 sm:gap-6 overflow-x-auto pb-4 sm:pb-8 scrollbar-hide -mx-0 px-2 sm:px-0 snap-x snap-mandatory scroll-smooth"
+          drag="x"
+          dragConstraints={scrollRef}
+          onScroll={checkScroll}
+          className="flex items-center gap-4 sm:gap-6 overflow-x-auto pb-4 sm:pb-8 scrollbar-hide -mx-0 px-2 sm:px-0 snap-x snap-mandatory lg:snap-none scroll-smooth cursor-grab active:cursor-grabbing"
         >
           {localClubs.map((club) => (
             <motion.div 
@@ -178,7 +181,7 @@ export function OCCTrendingClubs({ clubs }: { clubs: OCCTrendingClub[] }) {
               </div>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </div>
 

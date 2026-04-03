@@ -104,3 +104,10 @@ a {
 .animate-slow-glow {
   animation: slow-glow 4s infinite ease-in-out;
 }
+
+/* ENFORCE 90% ZOOM ON DESKTOP AS 100% PREFERENCE */
+@media screen and (min-width: 1200px) {
+  html {
+    zoom: 0.9;
+  }
+}
