@@ -83,6 +83,24 @@ export const eventRegistrationSchema = z.object({
 
 export const gigApplicationSchema = z.object({
   gigId: z.string().cuid(),
+  message: z.string().max(50).optional().or(z.literal("")),
+  applicantName: z.string().min(2).max(120).optional(),
+  applicantPhone: z.string().min(10).max(20).optional(),
+  applicantEmail: z.string().email().max(200).optional(),
+});
+
+export const gigCreateSchema = z.object({
+  title: z.string().min(3).max(200),
+  description: z.string().min(10).max(8000),
+  payMin: z.number().int().min(0),
+  payMax: z.number().int().min(0),
+  deadline: z.string().optional().nullable(),
+});
+
+export const gigUpdateSchema = gigCreateSchema;
+
+export const gigApplicationReviewSchema = z.object({
+  status: z.enum(["APPROVED", "REJECTED"]),
 });
 
 export const postCreateSchema = z.object({
@@ -91,6 +109,13 @@ export const postCreateSchema = z.object({
   imageUrls: z.array(z.string()).max(4).optional(),
   caption: z.string().max(2000).optional(),
   content: z.string().max(5000).optional(),
+  type: z.string().optional(),
+});
+
+export const postUpdateSchema = z.object({
+  caption: z.string().max(2000).optional().nullable(),
+  content: z.string().max(5000).optional().nullable(),
+  imageUrl: z.union([z.string().url(), z.literal("")]).optional().nullable(),
   type: z.string().optional(),
 });
 

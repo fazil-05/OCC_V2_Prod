@@ -1,10 +1,15 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { OCC_DEFAULT_CLUBS } from "../src/lib/occDefaultClubs";
+import { LEGACY_DUMMY_GIG_IDS } from "../src/lib/legacyDummyGigs";
 
 const prisma = new PrismaClient();
 
 async function main() {
+  await prisma.gig.deleteMany({
+    where: { id: { in: LEGACY_DUMMY_GIG_IDS } },
+  });
+
   const staffEmail = process.env.OCC_STAFF_ADMIN_EMAIL || "occ-staff-r8k2@occ-local.dev";
   const staffPassword = process.env.OCC_STAFF_ADMIN_PASSWORD || "Kx9#mQ2$vL8nW4pR@bF7tY1z";
   const adminHash = await bcrypt.hash(staffPassword, 12);
@@ -73,28 +78,6 @@ async function main() {
       },
     });
   }
-
-  await prisma.gig.createMany({
-    data: [
-      {
-        id: "seed-gig-photo-reel-cut",
-        title: "Event Photography Reel Cut",
-        description: "Edit a 30-second vertical reel from the latest club drop.",
-        payMin: 2500,
-        payMax: 4500,
-        deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 9),
-      },
-      {
-        id: "seed-gig-ride-poster-pack",
-        title: "Weekend Ride Poster Pack",
-        description: "Design social posters and ticket teasers for a city ride.",
-        payMin: 1800,
-        payMax: 3200,
-        deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 12),
-      },
-    ],
-    skipDuplicates: true,
-  });
 
   console.log("Clubs seeded.");
 }

@@ -1,9 +1,11 @@
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { gigWhereNotLegacyDummy } from "@/lib/legacyDummyGigs";
 import {
   OCC_PREMIUM_CLUB_IMAGES,
   resolvePostImageUrlForFeed,
 } from "@/lib/postImageUrl";
+import { displayClubMembers, displayPostLikes, formatSocialCount } from "@/lib/socialDisplay";
 import { OCCTrendingClubs } from "@/components/occ-dashboard/OCCStoriesRow";
 import { OCCPostCard } from "@/components/occ-dashboard/OCCPostCard";
 import { OCCRightRail } from "@/components/occ-dashboard/OCCRightRail";
@@ -40,7 +42,11 @@ export default async function DashboardPage() {
       include: { user: true, club: true }, 
       orderBy: { createdAt: "desc" } 
     }),
-    prisma.gig.findMany({ take: 3, orderBy: { createdAt: "desc" } }),
+    prisma.gig.findMany({
+      where: { ...gigWhereNotLegacyDummy },
+      take: 3,
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
 
   const trendingClubs = (clubs.length ? clubs : []).map(c => {
@@ -55,7 +61,7 @@ export default async function DashboardPage() {
       slug: c.slug,
       label: c.name,
       imageUrl: clubImg,
-      memberCount: ((c.memberCount || 0) / 1000).toFixed(1) + "k",
+      memberCount: formatSocialCount(displayClubMembers(c.id, c.memberCount || 0)),
     };
   });
 
@@ -71,7 +77,7 @@ export default async function DashboardPage() {
           timestamp: ago,
           caption: p.caption || p.content || "",
           imageUrl: postImg,
-          likeCount: p.likesCount || p.likes || 0,
+          likeCount: displayPostLikes(p.id, p.likesCount || p.likes || 0),
           sharesCount: p.sharesCount || 0,
           clubId: p.clubId,
           clubName: p.club?.name || "OCC Club",

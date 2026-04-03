@@ -1,0 +1,100 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getSessionUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { gigApplicationReviewSchema } from "@/lib/validations";
+import { broadcastEClubs, invalidateGigsListCache } from "@/lib/gigs-realtime";
+import { notifyAllAdmins } from "@/lib/notify-admins";
+import { isPusherServerConfigured, pusherServer } from "@/lib/pusher";
+
+export async function PATCH(
+  req: NextRequest,
+  ctx: { params: Promise<{ id: string }> },
+) {
+  const user = await getSessionUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (user.role !== "CLUB_HEADER" || user.approvalStatus !== "APPROVED" || !user.clubManaged) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const club = user.clubManaged;
+
+  const { id } = await ctx.params;
+  const body = await req.json();
+  const { status: nextStatus } = gigApplicationReviewSchema.parse(body);
+
+  const application = await prisma.gigApplication.findUnique({
+    where: { id },
+    include: {
+      gig: { select: { id: true, title: true, clubId: true, postedById: true } },
+      user: { select: { id: true, fullName: true } },
+    },
+  });
+
+  if (!application) {
+    return NextResponse.json({ error: "Application not found" }, { status: 404 });
+  }
+
+  const gig = application.gig;
+  const owns =
+    gig.clubId === club.id ||
+    gig.postedById === user.id;
+  if (!owns) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (application.status === "APPROVED" || application.status === "REJECTED") {
+    return NextResponse.json(
+      { error: "Application already resolved" },
+      { status: 400 },
+    );
+  }
+
+  const updated = await prisma.gigApplication.update({
+    where: { id },
+    data: { status: nextStatus },
+  });
+
+  invalidateGigsListCache();
+  await broadcastEClubs({
+    type: "gig-application-status",
+    gigId: gig.id,
+    applicationId: id,
+    status: nextStatus,
+  });
+
+  const verb = nextStatus === "APPROVED" ? "approved" : "declined";
+  try {
+    await prisma.notification.create({
+      data: {
+        userId: application.userId,
+        type: "gig_application_" + nextStatus.toLowerCase(),
+        title: nextStatus === "APPROVED" ? "Gig application approved" : "Gig application update",
+        message: `Your application for “${gig.title}” was ${verb}.`,
+        data: { gigId: gig.id, applicationId: id },
+      },
+    });
+    if (isPusherServerConfigured()) {
+      await pusherServer.trigger(`user-${application.userId}`, "notification", {
+        title: nextStatus === "APPROVED" ? "Gig approved" : "Gig application",
+        message: `“${gig.title}” — ${verb}.`,
+      });
+    }
+  } catch (e) {
+    console.warn("[gig-applications/patch] notify applicant failed:", e);
+  }
+
+  try {
+    await notifyAllAdmins(
+      "gig_application_review",
+      `Gig application ${verb}`,
+      `${user.fullName} ${verb} ${application.user.fullName} for “${gig.title}”.`,
+      { gigId: gig.id, applicationId: id, status: nextStatus },
+    );
+  } catch (e) {
+    console.warn("[gig-applications/patch] admin notify failed:", e);
+  }
+
+  return NextResponse.json({ success: true, application: updated });
+}

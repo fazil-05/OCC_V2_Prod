@@ -15,7 +15,8 @@ import {
   MoreHorizontal,
   LogOut,
   Bell,
-  AlertOctagon
+  AlertOctagon,
+  Briefcase,
 } from "lucide-react";
 import { NotificationBell } from "@/components/realtime/NotificationBell";
 import { STAFF_PUBLIC_PREFIX, staffHref } from "@/lib/staff-paths";
@@ -36,6 +37,7 @@ const nav: NavItem[] = [
   { path: "/clubs", label: "All Clubs", icon: Grid3X3 },
   { path: "/users", label: "All Users", icon: Users },
   { path: "/posts", label: "All Posts", icon: ImageIcon },
+  { path: "/gigs", label: "Gigs & hires", icon: Briefcase },
   { path: "/reports", label: "Intel Reports", icon: AlertOctagon },
   { path: "/analytics", label: "Analytics", icon: TrendingUp },
   { path: "/settings", label: "Settings", icon: Settings },

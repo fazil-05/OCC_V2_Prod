@@ -2,10 +2,12 @@ import { ApplyGigButton } from "@/components/dashboard/ApplyGigButton";
 import { GigCard } from "@/components/dashboard/GigCard";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { gigWhereNotLegacyDummy } from "@/lib/legacyDummyGigs";
 
 export default async function GigsPage() {
   const user = await requireUser();
   const gigs = await prisma.gig.findMany({
+    where: { ...gigWhereNotLegacyDummy },
     include: {
       applications: {
         where: { userId: user.id },

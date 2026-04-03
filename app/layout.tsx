@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Inter, Cormorant_Garamond } from "next/font/google"; // ADDED: High-end editorial serif
 import { Toaster } from "sonner";
+import { PerformanceProvider } from "@/components/PerformanceProvider";
 
 // Added professional weights for Inter
 const inter = Inter({ 
@@ -51,6 +52,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://d8j0ntlcm91z4.cloudfront.net" />
       </head>
       <body className={`${inter.className} antialiased`}>
+        <PerformanceProvider />
         <Toaster position="top-center" richColors theme="dark" />
         {children}
       </body>

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { postCreateSchema } from "@/lib/validations";
-import { pusherServer } from "@/lib/pusher";
+import { isPusherServerConfigured, pusherServer } from "@/lib/pusher";
+import { serverCache } from "@/lib/server-cache";
 
 export async function GET(req: NextRequest) {
   const clubId = req.nextUrl.searchParams.get("clubId");
@@ -24,7 +25,15 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json({ posts });
+  // Posts are user-scoped — never cache publicly
+  return NextResponse.json(
+    { posts },
+    {
+      headers: {
+        "Cache-Control": "private, no-cache, no-store, must-revalidate",
+      },
+    },
+  );
 }
 
 export async function POST(req: NextRequest) {
@@ -59,10 +68,16 @@ export async function POST(req: NextRequest) {
     include: { user: true, club: true },
   });
 
-  try {
-    await pusherServer.trigger(`club-${resolvedClubId}`, "new-post", { post });
-  } catch (e) {
-    console.warn("[posts] Pusher failed (non-critical):", e);
+  if (isPusherServerConfigured()) {
+    try {
+      await pusherServer.trigger(`club-${resolvedClubId}`, "new-post", { post });
+    } catch (e) {
+      console.warn("[posts] Pusher failed (non-critical):", e);
+    }
   }
+
+  // Invalidate caches so subsequent reads show fresh data immediately
+  serverCache.invalidatePrefix("clubs:");
+
   return NextResponse.json({ success: true, post }, { status: 201 });
 }

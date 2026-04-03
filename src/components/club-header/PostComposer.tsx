@@ -30,8 +30,8 @@ export function PostComposer({ clubId }: { clubId: string }) {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image must be under 5MB");
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Image must be under 8MB");
       return;
     }
 
@@ -47,8 +47,11 @@ export function PostComposer({ clubId }: { clubId: string }) {
       formData.append("file", file);
       const res = await fetch("/api/upload", { method: "POST", body: formData });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
+      if (!res.ok) throw new Error(data.detail || data.error || "Upload failed");
       setImageUrl(data.url);
+      if (data.warning) {
+        toast.warning(data.warning, { duration: 8000 });
+      }
       toast.success("Photo uploaded!");
     } catch {
       toast.error("Failed to upload photo");

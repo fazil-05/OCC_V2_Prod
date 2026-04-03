@@ -1,18 +1,15 @@
 "use client";
 
-import { Bell, Search, ChevronDown, Sparkles, LayoutGrid, User, LogOut } from "lucide-react";
+import { Bell, ChevronDown, Sparkles, LayoutGrid, User, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
+import { ExploreNavSearch } from "@/components/occ-dashboard/ExploreNavSearch";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { avatarSrc } from "@/lib/avatar";
 import { useLogout } from "@/hooks/useLogout";
 
 export function OCCHeader({ user }: { user: any }) {
-  const [isFocused, setIsFocused] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const router = useRouter();
   const logout = useLogout();
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -26,40 +23,16 @@ export function OCCHeader({ user }: { user: any }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSearch = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && searchQuery.trim()) {
-      router.push(`/explore?q=${encodeURIComponent(searchQuery)}`);
-    }
-  };
-
   return (
     <motion.header 
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       className="flex shrink-0 items-center justify-between px-4 sm:px-5 lg:px-6 py-4 sm:py-5 bg-white/80 backdrop-blur-3xl z-40 w-full border-b border-black/[0.03] sticky top-0 shadow-sm"
     >
-      {/* Premium Search Section */}
-      <div className="mr-2 flex max-w-md flex-1 items-center sm:mr-3 lg:max-w-lg xl:max-w-xl">
-        <div className={`relative w-full transition-all duration-500 ease-out ${isFocused ? 'scale-[1.02]' : 'scale-100'}`}>
-          <div className={`absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-[#5227FF] via-[#D4AF37] to-[#8C6DFD] opacity-0 blur transition-all duration-500 ${isFocused ? 'opacity-20' : 'opacity-0'}`} />
-          <div className="relative flex items-center">
-            <Search className={`pointer-events-none absolute left-4 sm:left-6 h-4 sm:h-5 w-4 sm:w-5 transition-colors duration-300 ${isFocused ? 'text-[#D4AF37]' : 'text-black/40'}`} strokeWidth={3} />
-            <input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={handleSearch}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
-              placeholder="Search..."
-              className="h-10 sm:h-14 w-full rounded-2xl bg-black/[0.03] border border-black/5 px-10 sm:px-15 text-[13px] sm:text-[15px] font-normal text-black outline-none placeholder:text-black/30 focus:bg-white focus:shadow-[0_20px_50px_rgba(0,0,0,0.05)] transition-all duration-500"
-            />
-            <div className="absolute right-5 hidden sm:flex items-center gap-2 pointer-events-none">
-              <kbd className="inline-flex h-6 items-center gap-1 rounded-lg border border-black/10 bg-white px-2 font-mono text-[11px] font-medium text-black/30 shadow-sm">
-                <span className="text-sm">⌘</span>K
-              </kbd>
-            </div>
-          </div>
-        </div>
+      <div className="min-w-0 flex-1 flex items-center gap-3 pr-2 sm:pr-4">
+        <Suspense fallback={null}>
+          <ExploreNavSearch />
+        </Suspense>
       </div>
 
       {/* Action Items - High-End Layout */}

@@ -5,6 +5,7 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { pusherClient } from "@/lib/pusher";
+import { displayClubMembers, formatSocialCount } from "@/lib/socialDisplay";
 
 export type OCCTrendingClub = {
   id: string;
@@ -34,13 +35,18 @@ export function OCCTrendingClubs({ clubs }: { clubs: OCCTrendingClub[] }) {
     localClubs.forEach(club => {
       const channel = pusherClient?.subscribe(`club-${club.id}`);
       if (channel) {
-        channel.bind("member-joined", (data: { clubId: string; memberCount: number }) => {
-          setLocalClubs(prev => prev.map(c => 
-            c.id === data.clubId 
-              ? { ...c, memberCount: (data.memberCount / 1000).toFixed(1) + "k" } 
-              : c
-          ));
-        });
+        channel.bind(
+          "member-joined",
+          (data: { clubId: string; memberCount: number; displayMemberCount?: number }) => {
+            const display =
+              data.displayMemberCount ?? displayClubMembers(data.clubId, data.memberCount);
+            setLocalClubs((prev) =>
+              prev.map((c) =>
+                c.id === data.clubId ? { ...c, memberCount: formatSocialCount(display) } : c,
+              ),
+            );
+          },
+        );
       }
     });
 

@@ -2,7 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuthToken } from "@/lib/jwt";
 import { staffGateHref, STAFF_PUBLIC_PREFIX } from "@/lib/staff-paths";
 
-const PROTECTED_PATHS = ["/dashboard", "/clubs", "/events", "/gigs", "/profile", "/explore"];
+const PROTECTED_PATHS = [
+  "/dashboard",
+  "/clubs",
+  "/events",
+  "/gigs",
+  "/profile",
+  "/explore",
+  "/notifications",
+  "/e-clubs",
+];
 const AUTH_PATHS = ["/login", "/register", "/club-header/login", "/club-header/register"];
 
 function isStaffGatePath(pathname: string) {

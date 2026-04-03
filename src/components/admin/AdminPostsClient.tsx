@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { Pencil } from "lucide-react";
 
 export type AdminPostRow = {
   id: string;
@@ -20,6 +21,11 @@ export type AdminPostRow = {
 
 export function AdminPostsClient({ posts: initial }: { posts: AdminPostRow[] }) {
   const [posts, setPosts] = useState(initial);
+  const [edit, setEdit] = useState<AdminPostRow | null>(null);
+  const [editCaption, setEditCaption] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editImageUrl, setEditImageUrl] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
 
   const patch = async (id: string, body: { hidden?: boolean; pinned?: boolean }) => {
     const res = await fetch(`/api/admin/posts/${id}`, {
@@ -33,6 +39,49 @@ export function AdminPostsClient({ posts: initial }: { posts: AdminPostRow[] }) 
     }
     setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, ...body } : p)));
     toast.success("Updated");
+  };
+
+  const openEdit = (p: AdminPostRow) => {
+    setEdit(p);
+    setEditCaption(p.caption || "");
+    setEditContent(p.content || "");
+    setEditImageUrl(p.imageUrl || "");
+  };
+
+  const saveEdit = async () => {
+    if (!edit) return;
+    setEditSaving(true);
+    try {
+      const res = await fetch(`/api/admin/posts/${edit.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caption: editCaption || null,
+          content: editContent || null,
+          imageUrl: editImageUrl.trim() || "",
+        }),
+      });
+      if (!res.ok) {
+        toast.error("Save failed");
+        return;
+      }
+      setPosts((prev) =>
+        prev.map((x) =>
+          x.id === edit.id
+            ? {
+                ...x,
+                caption: editCaption || null,
+                content: editContent || null,
+                imageUrl: editImageUrl.trim() || null,
+              }
+            : x,
+        ),
+      );
+      toast.success("Post updated");
+      setEdit(null);
+    } finally {
+      setEditSaving(false);
+    }
   };
 
   const remove = async (id: string) => {
@@ -93,6 +142,15 @@ export function AdminPostsClient({ posts: initial }: { posts: AdminPostRow[] }) 
               <div className="flex shrink-0 flex-wrap gap-2 md:flex-col">
                 <button
                   type="button"
+                  onClick={() => openEdit(p)}
+                  className="rounded-full border border-[#C9A96E]/35 px-3 py-1.5 text-xs text-[#C9A96E]"
+                >
+                  <span className="inline-flex items-center gap-1">
+                    <Pencil className="h-3 w-3" /> Edit
+                  </span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => patch(p.id, { hidden: !p.hidden })}
                   className="rounded-full border border-white/20 px-3 py-1.5 text-xs text-white/85"
                 >
@@ -118,6 +176,51 @@ export function AdminPostsClient({ posts: initial }: { posts: AdminPostRow[] }) 
         ))}
       </div>
       {posts.length === 0 ? <p className="text-center text-white/50">No posts yet.</p> : null}
+
+      {edit ? (
+        <div className="fixed inset-0 z-[400] flex items-end justify-center bg-black/75 p-4 sm:items-center">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-[#C9A96E]/25 bg-[#0c0a08] p-6">
+            <h2 className="font-serif text-xl italic text-[#F5F1EB]">Edit post</h2>
+            <label className="mt-4 block text-[10px] uppercase tracking-wider text-white/40">Caption</label>
+            <textarea
+              value={editCaption}
+              onChange={(e) => setEditCaption(e.target.value)}
+              rows={3}
+              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 p-3 text-sm text-white outline-none focus:border-[#C9A96E]/40"
+            />
+            <label className="mt-3 block text-[10px] uppercase tracking-wider text-white/40">Content</label>
+            <textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              rows={4}
+              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 p-3 text-sm text-white outline-none focus:border-[#C9A96E]/40"
+            />
+            <label className="mt-3 block text-[10px] uppercase tracking-wider text-white/40">Image URL</label>
+            <input
+              value={editImageUrl}
+              onChange={(e) => setEditImageUrl(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[#C9A96E]/40"
+            />
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEdit(null)}
+                className="rounded-full px-4 py-2 text-xs text-white/60 hover:bg-white/5"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={editSaving}
+                onClick={() => void saveEdit()}
+                className="rounded-full border border-[#C9A96E]/40 bg-[#C9A96E]/15 px-5 py-2 text-xs font-semibold text-[#C9A96E] disabled:opacity-50"
+              >
+                {editSaving ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

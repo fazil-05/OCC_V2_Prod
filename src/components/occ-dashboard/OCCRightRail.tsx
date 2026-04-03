@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { pusherClient } from "@/lib/pusher";
+import { displayClubMembers, formatSocialCount } from "@/lib/socialDisplay";
 
 export type OCCEventItem = {
   id: string;
@@ -59,13 +60,18 @@ export function OCCRightRail({ events, trending, opportunities }: OCCRightRailPr
     localTrending.forEach(club => {
       const channel = pusherClient?.subscribe(`club-${club.id}`);
       if (channel) {
-        channel.bind("member-joined", (data: { clubId: string; memberCount: number }) => {
-          setLocalTrending(prev => prev.map(c => 
-            c.id === data.clubId 
-              ? { ...c, members: (data.memberCount / 1000).toFixed(1) + "k" } 
-              : c
-          ));
-        });
+        channel.bind(
+          "member-joined",
+          (data: { clubId: string; memberCount: number; displayMemberCount?: number }) => {
+            const display =
+              data.displayMemberCount ?? displayClubMembers(data.clubId, data.memberCount);
+            setLocalTrending((prev) =>
+              prev.map((c) =>
+                c.id === data.clubId ? { ...c, members: formatSocialCount(display) } : c,
+              ),
+            );
+          },
+        );
       }
     });
 

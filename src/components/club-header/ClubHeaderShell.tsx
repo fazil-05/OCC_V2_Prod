@@ -9,14 +9,17 @@ import {
   Link2,
   TrendingUp,
   CalendarDays,
+  Briefcase,
   ChevronRight,
   MoreHorizontal,
   Search,
   Bell,
   Copy,
+  LogOut,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { useLogout } from "@/hooks/useLogout";
 
 type NavItem = {
   path: string;
@@ -28,6 +31,7 @@ const nav: NavItem[] = [
   { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/post", label: "Post", icon: PenSquare },
   { path: "/members", label: "Members", icon: Users },
+  { path: "/gigs", label: "Gigs", icon: Briefcase },
   { path: "/referral", label: "Referral", icon: Link2 },
   { path: "/analytics", label: "Analytics", icon: TrendingUp },
   { path: "/events", label: "Events", icon: CalendarDays },
@@ -51,6 +55,7 @@ interface ClubHeaderShellProps {
 
 export function ClubHeaderShell({ children, user }: ClubHeaderShellProps) {
   const pathname = usePathname();
+  const logout = useLogout();
   const [mounted, setMounted] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
 
@@ -209,8 +214,20 @@ export function ClubHeaderShell({ children, user }: ClubHeaderShellProps) {
                 />
               </div>
 
-              <div className="flex items-center gap-3">
-                <button className="relative rounded-full bg-white/[0.03] border border-white/[0.08] p-2.5 hover:bg-white/[0.06] transition-colors">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <button
+                  type="button"
+                  onClick={() => void logout()}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/[0.1] bg-white/[0.04] px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-white/75 hover:border-red-500/35 hover:bg-red-500/10 hover:text-red-200 transition-colors"
+                >
+                  <LogOut className="h-4 w-4 shrink-0" strokeWidth={2.25} />
+                  <span className="hidden sm:inline">Log out</span>
+                </button>
+                <button
+                  type="button"
+                  className="relative rounded-full bg-white/[0.03] border border-white/[0.08] p-2.5 hover:bg-white/[0.06] transition-colors"
+                  aria-label="Notifications"
+                >
                   <Bell className="h-5 w-5 text-white/50" />
                 </button>
                 <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-white/10 shadow-[0_0_15px_rgba(0,0,0,0.5)]">

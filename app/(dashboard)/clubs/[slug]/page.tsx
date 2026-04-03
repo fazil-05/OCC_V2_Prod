@@ -4,6 +4,8 @@ import { ClubTabs } from "@/components/dashboard/ClubTabs";
 import { JoinClubButton } from "@/components/dashboard/JoinClubButton";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { gigWhereNotLegacyDummy } from "@/lib/legacyDummyGigs";
+import { displayClubMembers, displayPostLikes, formatSocialCount } from "@/lib/socialDisplay";
 
 const CINEMATIC_SLUGS: Record<string, { route: string; label: string; gradient: string }> = {
   bikers:      { route: "/bikers",      label: "Bikers Ride",    gradient: "from-amber-900/40 via-[#0C0C0A] to-orange-950/30" },
@@ -54,7 +56,10 @@ export default async function ClubDetailPage({
   const joined = club.members.some((membership) => membership.userId === user.id);
   const gigs = await prisma.gig.findMany({
     where: {
-      OR: [{ clubId: club.id }, { clubId: null }],
+      AND: [
+        { ...gigWhereNotLegacyDummy },
+        { OR: [{ clubId: club.id }, { clubId: null }] },
+      ],
     },
     include: {
       applications: {
@@ -94,7 +99,8 @@ export default async function ClubDetailPage({
 
           <div className="flex items-center gap-4">
             <span className="rounded-full border border-white/8 bg-white/5 px-4 py-2 text-[11px] uppercase tracking-[0.24em] text-[#F5F0E8]/75">
-              {club.memberCount || club.members.length} members
+              {formatSocialCount(displayClubMembers(club.id, club.memberCount || club.members.length))}{" "}
+              members
             </span>
             <JoinClubButton slug={club.slug} joined={joined} />
           </div>
@@ -102,7 +108,10 @@ export default async function ClubDetailPage({
       </section>
 
       <ClubTabs
-        posts={club.posts}
+        posts={club.posts.map((p) => ({
+          ...p,
+          likes: displayPostLikes(p.id, p.likesCount ?? p.likes ?? 0),
+        }))}
         events={club.events.map((event) => ({
           ...event,
           registered: event.registrations.length > 0,

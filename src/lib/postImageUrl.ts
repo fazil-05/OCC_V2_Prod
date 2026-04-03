@@ -32,9 +32,8 @@ function absoluteUrlForUploadPath(path: string): string | null {
 /**
  * Resolves post image URLs for the feed.
  * - Full `https://` URLs (Blob, R2, etc.) pass through.
- * - `/uploads/...` becomes `{NEXT_PUBLIC_UPLOADS_CDN_BASE}/uploads/...` when that env is set (Cloudflare R2 mirror).
- * - `http://localhost.../uploads/...` is rewritten the same way when env is set.
- * - Otherwise falls back to club premium art (no disk on Vercel for local `/uploads/`).
+ * - `/uploads/...` uses `NEXT_PUBLIC_UPLOADS_CDN_BASE` when set (R2 mirror); otherwise keeps `/uploads/...`
+ *   so local dev serves files from `public/uploads/` correctly. (Do not substitute premium club art.)
  */
 export function resolvePostImageUrlForFeed(
   imageUrl: string | null | undefined,
@@ -46,20 +45,20 @@ export function resolvePostImageUrlForFeed(
 
   if (raw.startsWith("/uploads/")) {
     const abs = absoluteUrlForUploadPath(raw);
-    return abs ?? fallback;
+    return abs ?? raw;
   }
 
-  if (/localhost|127\.0\.0\.1/i.test(raw)) {
+  if (/^https?:\/\//i.test(raw)) {
     try {
       const u = new URL(raw);
       if (u.pathname.startsWith("/uploads/")) {
         const abs = absoluteUrlForUploadPath(u.pathname);
-        if (abs) return abs;
+        return abs ?? raw;
       }
+      return raw;
     } catch {
-      /* ignore */
+      return fallback;
     }
-    return fallback;
   }
 
   return raw;

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { displayClubMembers } from "@/lib/socialDisplay";
+import { pusherServer } from "@/lib/pusher";
 
 export async function POST(_req: NextRequest, { params }: { params: { slug: string } }) {
   const user = await getSessionUser();
@@ -39,11 +41,16 @@ export async function POST(_req: NextRequest, { params }: { params: { slug: stri
     },
   });
 
-  const { pusherServer } = require("@/lib/pusher");
-  await pusherServer.trigger(`club-${club.id}`, "member-joined", { 
-    clubId: club.id, 
-    memberCount: updatedClub.memberCount 
+  const displayMemberCount = displayClubMembers(club.id, updatedClub.memberCount);
+  await pusherServer.trigger(`club-${club.id}`, "member-joined", {
+    clubId: club.id,
+    memberCount: updatedClub.memberCount,
+    displayMemberCount,
   });
 
-  return NextResponse.json({ success: true, memberCount: updatedClub.memberCount });
+  return NextResponse.json({
+    success: true,
+    memberCount: updatedClub.memberCount,
+    displayMemberCount,
+  });
 }

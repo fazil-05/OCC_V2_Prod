@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { OCCSidebar } from "@/components/occ-dashboard/OCCSidebar";
 import { OCCHeader } from "@/components/occ-dashboard/OCCHeader";
+import { DashboardPageTransition } from "@/components/occ-dashboard/DashboardPageTransition";
 import { headers } from "next/headers";
 export default async function DashboardLayout({
   children,
@@ -21,7 +22,7 @@ export default async function DashboardLayout({
 
         <main className="flex-1 overflow-y-auto overflow-x-hidden px-0 sm:px-4 lg:px-5 xl:px-7 pb-24 lg:pb-10 pt-2 sm:pt-6 bg-[#F6F7FA] text-[15px] font-normal leading-normal">
           <div className="mx-auto w-full max-w-[min(100%,1240px)]">
-            {children}
+            <DashboardPageTransition>{children}</DashboardPageTransition>
           </div>
         </main>
       </div>

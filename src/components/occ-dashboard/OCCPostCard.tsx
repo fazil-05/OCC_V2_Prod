@@ -30,13 +30,58 @@ export type OCCPost = {
   commentsCount?: number;
 };
 
+/** Instagram-style: always clamp to 5 lines until expanded (works at any viewport width). */
+function PostCaptionBody({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const pRef = useRef<HTMLParagraphElement>(null);
+  const [hasOverflow, setHasOverflow] = useState(false);
+  const body = text.trim() ? text : "No description provided.";
+
+  useEffect(() => {
+    if (expanded) {
+      setHasOverflow(false);
+      return;
+    }
+    const el = pRef.current;
+    if (!el) return;
+    const measure = () => setHasOverflow(el.scrollHeight > el.clientHeight + 1);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [body, expanded]);
+
+  const showToggle = hasOverflow || body.length > 200;
+
+  return (
+    <div>
+      <p
+        ref={pRef}
+        className={`text-[13px] sm:text-[13.5px] font-normal leading-[1.5] text-black/60 font-sans whitespace-pre-wrap [overflow-wrap:anywhere] ${
+          !expanded ? "line-clamp-5" : ""
+        }`}
+      >
+        {body}
+      </p>
+      {showToggle ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          className="mt-1.5 block text-[13px] font-semibold text-black/45 transition-colors hover:text-black/70 active:opacity-70"
+        >
+          {expanded ? "Read less" : "Read more"}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export function OCCPostCard({ post }: { post: OCCPost }) {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post.likeCount);
   const [sharesCount, setSharesCount] = useState(post.sharesCount || 0);
   const [saved, setSaved] = useState(false);
   
-  const [isLandscape, setIsLandscape] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -46,6 +91,10 @@ export function OCCPostCard({ post }: { post: OCCPost }) {
   const [comments, setComments] = useState<any[]>([]);
   const [commentText, setCommentText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    setLikeCount(post.likeCount);
+  }, [post.id, post.likeCount]);
 
   // REALTIME - Listening for likes, shares, AND comments
   useEffect(() => {
@@ -74,16 +123,11 @@ export function OCCPostCard({ post }: { post: OCCPost }) {
   }, [post.id, post.clubId]);
 
   const handleImageLoad = () => {
-    if (imgRef.current) {
-      const { naturalWidth, naturalHeight } = imgRef.current;
-      setIsLandscape(naturalWidth > naturalHeight * 1.15);
-      setIsLoaded(true);
-    }
+    setIsLoaded(true);
   };
 
   const handleImageError = () => {
     setIsLoaded(true);
-    setIsLandscape(true);
     setImgError(true);
   };
 
@@ -174,12 +218,13 @@ export function OCCPostCard({ post }: { post: OCCPost }) {
       layout
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className="group relative overflow-hidden sm:rounded-[2rem] border-y sm:border border-black/[0.04] bg-white shadow-[0_30px_70px_-20px_rgba(0,0,0,0.08)] mb-4 sm:mb-10 max-w-full sm:max-w-[950px] mx-auto w-full transition-all duration-700"
+      className="group relative overflow-hidden rounded-none border-y border-black/[0.05] bg-white shadow-[0_12px_40px_-18px_rgba(0,0,0,0.1)] sm:rounded-2xl sm:border mb-3 sm:mb-6 max-w-full lg:max-w-[min(100%,920px)] mx-auto w-full transition-all duration-500"
     >
-      <div className={`flex flex-col ${isLandscape ? 'flex-col' : 'lg:flex-row'} transition-all duration-700`}>
+      {/* Mobile: stacked · Desktop (lg+): image | text — not driven by photo aspect ratio */}
+      <div className="flex flex-col lg:flex-row lg:items-stretch transition-all duration-500">
         
-        {/* MEDIA SEGMENT - CINEMATIC FOCUS */}
-        <div className={`relative flex-1 bg-[#121212] flex items-center justify-center overflow-hidden transition-all duration-700 ${isLandscape ? 'h-auto max-h-[400px] sm:max-h-[500px]' : 'lg:max-w-[500px] min-h-[250px] sm:min-h-[300px]'}`}>
+        {/* MEDIA SEGMENT */}
+        <div className="relative min-h-[200px] flex-1 min-w-0 bg-[#121212] flex items-center justify-center overflow-hidden transition-all duration-500 max-h-[300px] sm:max-h-[380px] lg:max-h-none lg:min-h-[min(520px,72vh)] lg:max-w-[min(100%,480px)]">
           {!imgError && (
             <div 
               className="absolute inset-0 opacity-25 blur-[60px] scale-150 pointer-events-none transition-opacity duration-1000"
@@ -194,7 +239,7 @@ export function OCCPostCard({ post }: { post: OCCPost }) {
           
           {imgError ? (
             <div
-              className="relative z-10 flex h-[200px] sm:h-[280px] w-full items-center justify-center bg-gradient-to-br from-[#5227FF]/20 via-[#121212] to-[#D4AF37]/20"
+              className="relative z-10 flex h-[180px] sm:h-[220px] w-full items-center justify-center bg-gradient-to-br from-[#5227FF]/20 via-[#121212] to-[#D4AF37]/20"
               onDoubleClick={toggleLike}
             >
               <span className="text-[11px] sm:text-[13px] font-medium uppercase tracking-[0.2em] text-white/20">
@@ -208,7 +253,7 @@ export function OCCPostCard({ post }: { post: OCCPost }) {
               alt="" 
               onLoad={handleImageLoad}
               onError={handleImageError}
-              className={`relative z-10 transition-all duration-1000 ease-out ${isLoaded ? 'scale-100 opacity-100' : 'opacity-100'} ${isLandscape ? 'w-full h-auto object-cover max-h-[400px] sm:max-h-[500px]' : 'w-full h-full object-cover max-h-[500px] sm:max-h-[600px] lg:max-h-[650px]'}`}
+              className="relative z-10 h-full w-full object-cover transition-all duration-700 ease-out max-h-[300px] sm:max-h-[380px] lg:max-h-none lg:min-h-[min(520px,72vh)] lg:max-h-[min(640px,75vh)]"
               onDoubleClick={toggleLike}
             />
           )}
@@ -228,29 +273,29 @@ export function OCCPostCard({ post }: { post: OCCPost }) {
         </div>
 
         {/* INTELLECTUAL SEGMENT - TEXT & COMMENTS */}
-        <div className={`flex flex-col bg-white p-5 sm:p-8 lg:p-10 transition-all duration-700 ${isLandscape ? 'w-full' : 'lg:w-[420px] shrink-0 border-l border-black/[0.03]'}`}>
+        <div className="flex w-full flex-col bg-white p-4 sm:p-5 lg:p-6 transition-all duration-500 lg:w-[min(100%,340px)] xl:w-[360px] lg:shrink-0 lg:border-l lg:border-black/[0.04]">
           
           {/* Identity Header */}
-          <div className="flex items-center justify-between mb-4 sm:mb-6 pb-4 sm:pb-6 border-b border-black/[0.04]">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="h-8 w-8 sm:h-10 sm:w-10 overflow-hidden rounded-full ring-1 ring-black/5">
+          <div className="flex items-center justify-between mb-3 sm:mb-4 pb-3 sm:pb-4 border-b border-black/[0.06]">
+            <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+              <div className="h-8 w-8 sm:h-9 sm:w-9 overflow-hidden rounded-full ring-1 ring-black/[0.06]">
                 <img src={post.userAvatarUrl} className="h-full w-full object-cover" />
               </div>
-              <div className="flex flex-col gap-0.5">
+              <div className="min-w-0 flex flex-col gap-0.5">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[13px] sm:text-[14px] font-semibold text-black tracking-tight font-sans">{post.username}</span>
-                  <BadgeCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#5227FF]" fill="#5227FF" />
+                  <span className="truncate text-[13px] font-semibold text-black tracking-tight font-sans">{post.username}</span>
+                  <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-[#5227FF]" fill="#5227FF" />
                 </div>
-                <span className="text-[9px] sm:text-[10px] font-semibold text-black/30 uppercase tracking-[0.1em] font-sans">{post.timestamp} • {post.clubName || "OCC"}</span>
+                <span className="text-[9px] font-medium text-black/35 uppercase tracking-[0.08em] font-sans">{post.timestamp} · {post.clubName || "OCC"}</span>
               </div>
             </div>
-            <button className="p-2 rounded-xl hover:bg-black/[0.03] text-black/20 transition-all">
+            <button type="button" className="shrink-0 rounded-lg p-1.5 text-black/25 transition hover:bg-black/[0.04] hover:text-black/40">
               <MoreHorizontal className="h-4 w-4" />
             </button>
           </div>
 
           {/* Animated Transition between Caption and Comments */}
-          <div className="flex-1 space-y-4 sm:space-y-6 overflow-y-auto scrollbar-hide max-h-[350px] sm:max-h-[450px]">
+          <div className="flex-1 space-y-3 sm:space-y-4 overflow-y-auto scrollbar-hide max-h-[260px] sm:max-h-[340px]">
              <AnimatePresence mode="wait">
               {!isCommentsOpen ? (
                 <motion.div 
@@ -258,17 +303,18 @@ export function OCCPostCard({ post }: { post: OCCPost }) {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 10 }}
-                  className="space-y-3 sm:space-y-4"
+                  className="space-y-2.5 sm:space-y-3"
                 >
-                  <h4 className="font-serif italic text-[1.5rem] sm:text-[1.75rem] text-black/90 leading-[1.2] tracking-normal mb-1 sm:mb-2 text-balance">
-                    {post.caption ? post.caption.split('.')[0] + '.' : "Editorial Statement."}
+                  <h4 className="font-serif italic text-[1.15rem] sm:text-[1.25rem] text-black/90 leading-snug tracking-normal text-balance line-clamp-2">
+                    {post.caption ? post.caption.split(".")[0] + "." : "Editorial Statement."}
                   </h4>
-                  <p className="text-[13.5px] sm:text-[14.5px] font-medium leading-relaxed text-black/50 font-sans whitespace-pre-wrap">
-                    {post.caption || "No description provided."}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {['Elite', 'Direct', 'Intel'].map(tag => (
-                      <span key={tag} className="px-2.5 py-1 rounded-full border border-black/[0.04] bg-black/[0.01] text-[8px] sm:text-[9px] font-medium uppercase tracking-[0.15em] text-black/30 font-sans">
+                  <PostCaptionBody text={post.caption || ""} />
+                  <div className="flex flex-wrap gap-1">
+                    {["Elite", "Direct", "Intel"].map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full border border-black/[0.06] bg-black/[0.02] px-2 py-0.5 text-[8px] font-medium uppercase tracking-wider text-black/35 font-sans"
+                      >
                         #{tag}
                       </span>
                     ))}
@@ -339,45 +385,48 @@ export function OCCPostCard({ post }: { post: OCCPost }) {
           </div>
 
           {/* Interaction Hub */}
-          <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-black/[0.05]">
-            <div className="flex items-center justify-between mb-5 sm:mb-6">
-              <div className="flex items-center gap-4 sm:gap-6">
-                <button onClick={toggleLike} className="flex items-center gap-1.5 sm:gap-2 group">
-                  <Heart className={`h-5 w-5 sm:h-6 sm:w-6 transition-all ${liked ? 'text-[#FF3040] fill-[#FF3040]' : 'text-black/20 group-hover:text-[#FF3040]'}`} strokeWidth={2.4} />
-                  <span className="text-[12px] sm:text-[13px] font-semibold text-black/80 font-sans">{likeCount}</span>
+          <div className="mt-4 sm:mt-5 pt-4 sm:pt-5 border-t border-black/[0.06]">
+            <div className="mb-4 flex items-center justify-between sm:mb-4">
+              <div className="flex items-center gap-3 sm:gap-5">
+                <button type="button" onClick={toggleLike} className="group flex items-center gap-1.5">
+                  <Heart className={`h-[22px] w-[22px] sm:h-6 sm:w-6 transition-all ${liked ? "text-[#FF3040] fill-[#FF3040]" : "text-black/25 group-hover:text-[#FF3040]"}`} strokeWidth={2.2} />
+                  <span className="text-[12px] font-semibold text-black/75 font-sans tabular-nums">
+                    {likeCount.toLocaleString("en-IN")}
+                  </span>
                 </button>
-                <button 
-                  onClick={() => setIsCommentsOpen(!isCommentsOpen)} 
-                  className={`flex items-center gap-1.5 sm:gap-2 group transition-all ${isCommentsOpen ? 'scale-110' : 'scale-100'}`}
+                <button
+                  type="button"
+                  onClick={() => setIsCommentsOpen(!isCommentsOpen)}
+                  className={`group flex items-center gap-1.5 transition-transform ${isCommentsOpen ? "scale-[1.03]" : ""}`}
                 >
-                  <MessageCircle className={`h-5 w-5 sm:h-6 sm:w-6 transition-all ${isCommentsOpen ? 'text-[#5227FF] fill-[#5227FF]/10' : 'text-black/20 group-hover:text-[#5227FF]'}`} strokeWidth={2.4} />
-                  <span className="text-[12px] sm:text-[13px] font-semibold text-black/80 font-sans">{comments.length || post.commentsCount || 0}</span>
+                  <MessageCircle className={`h-[22px] w-[22px] sm:h-6 sm:w-6 transition-all ${isCommentsOpen ? "text-[#5227FF] fill-[#5227FF]/10" : "text-black/25 group-hover:text-[#5227FF]"}`} strokeWidth={2.2} />
+                  <span className="text-[12px] font-semibold text-black/75 font-sans">{comments.length || post.commentsCount || 0}</span>
                 </button>
               </div>
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <button onClick={handleShare} className="p-2 sm:p-2.5 rounded-xl text-black/10 hover:text-black bg-black/[0.02] transition-all flex items-center gap-2 border border-black/[0.03]">
-                  <Share2 className="h-4 w-4 sm:h-5 sm:w-5" />
-                  {sharesCount > 0 && <span className="text-[10px] sm:text-[11px] font-semibold">{sharesCount}</span>}
+              <div className="flex items-center gap-1">
+                <button type="button" onClick={handleShare} className="flex items-center gap-1.5 rounded-xl border border-black/[0.06] bg-black/[0.02] p-2 text-black/25 transition hover:text-black/60">
+                  <Share2 className="h-4 w-4" />
+                  {sharesCount > 0 && <span className="text-[10px] font-semibold">{sharesCount}</span>}
                 </button>
-                <button onClick={() => setSaved(!saved)} className="p-2 sm:p-2.5 rounded-xl text-black/10 transition-all bg-black/[0.02] border border-black/[0.03]">
-                  <Bookmark className={`h-4 w-4 sm:h-5 sm:w-5 ${saved ? 'text-black fill-black' : 'text-black/10'}`} />
+                <button type="button" onClick={() => setSaved(!saved)} className="rounded-xl border border-black/[0.06] bg-black/[0.02] p-2 text-black/25 transition hover:text-black/50">
+                  <Bookmark className={`h-4 w-4 ${saved ? "text-black fill-black" : ""}`} />
                 </button>
               </div>
             </div>
 
-            <form onSubmit={handleAddComment} className="relative group/input">
+            <form onSubmit={handleAddComment} className="group/input relative">
               <input 
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 type="text" 
-                placeholder={isSubmitting ? "Broadcasting..." : "Share perspective..."}
+                placeholder={isSubmitting ? "Sending…" : "Add a comment…"}
                 disabled={isSubmitting}
-                className="w-full h-12 sm:h-14 rounded-[1.25rem] bg-black/[0.03] border-2 border-transparent px-5 sm:px-6 pr-20 text-[13px] sm:text-[14px] font-normal text-black outline-none placeholder:text-black/20 focus:bg-white focus:border-[#5227FF]/20 transition-all shadow-inner focus:shadow-none"
+                className="h-11 w-full rounded-2xl border border-transparent bg-black/[0.04] px-4 pr-[4.5rem] text-[13px] font-normal text-black outline-none transition placeholder:text-black/30 focus:border-[#5227FF]/25 focus:bg-white sm:h-12"
               />
               <button 
                 type="submit"
                 disabled={!commentText.trim() || isSubmitting}
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 sm:h-10 px-4 sm:px-6 rounded-xl bg-[#5227FF] !text-white text-[10px] sm:text-[11px] font-semibold uppercase tracking-widest opacity-0 group-focus-within:opacity-100 disabled:opacity-0 transition-all shadow-lg active:scale-95"
+                className="absolute right-1.5 top-1/2 h-8 -translate-y-1/2 rounded-xl bg-[#5227FF] px-4 text-[10px] font-semibold uppercase tracking-wide !text-white opacity-0 transition group-focus-within:opacity-100 disabled:opacity-0"
               >
                 Post
               </button>
