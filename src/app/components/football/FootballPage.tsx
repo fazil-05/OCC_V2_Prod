@@ -430,44 +430,36 @@ function JoinFootballSection() {
 }
 
 /* ── Main Page ───────────────────────────────────────────── */
-export function FootballPage({ embedded = false }: { embedded?: boolean }) {
+export function FootballPage() {
   const { frames, loaded, progress } = useFootballFrames(FOOTBALL_FRAMES_PATH, FOOTBALL_TOTAL_FRAMES);
 
   return (
-    <div className={embedded ? "" : "cursor-none"} style={{ background: FC.bg, color: FC.text }}>
+    <div className="cursor-none" style={{ background: FC.bg, color: FC.text }}>
       <FootballLoadingScreen progress={progress} loaded={loaded} />
-      {!embedded ? <FootballCursor /> : null}
-      {!embedded ? <GrainOverlay /> : null}
+      <FootballCursor />
+      <GrainOverlay />
 
-      {/* Header */}
-      {!embedded ? (
-        <header className="pointer-events-none fixed top-0 right-0 left-0 z-[100] flex items-center justify-between px-6 py-6 mix-blend-difference md:px-12">
-          <Link to="/" className="pointer-events-auto text-[10px] tracking-[0.4em] uppercase transition-colors" style={{ color: FC.text }}>
-            ← OCC
-          </Link>
-          <span className="font-headline text-lg tracking-[0.15em] md:text-xl" style={{ color: FC.text }}>OCC</span>
-          <span className="text-[10px] tracking-[0.3em] uppercase" style={{ color: FC.muted }}>Football</span>
-        </header>
-      ) : null}
+      <header className="pointer-events-none fixed top-0 right-0 left-0 z-[100] flex items-center justify-between px-6 py-6 mix-blend-difference md:px-12">
+        <Link to="/" className="pointer-events-auto text-[10px] tracking-[0.4em] uppercase transition-colors" style={{ color: FC.text }}>
+          ← OCC
+        </Link>
+        <span className="font-headline text-lg tracking-[0.15em] md:text-xl" style={{ color: FC.text }}>OCC</span>
+        <span className="text-[10px] tracking-[0.3em] uppercase" style={{ color: FC.muted }}>Football</span>
+      </header>
 
-      {/* Single viewport: intro + scroll cinema share the same sticky canvas */}
-      <FootballScrollSection frames={frames} loaded={loaded} embedded={embedded} />
+      <FootballScrollSection frames={frames} loaded={loaded} />
 
-      {!embedded ? (
-        <>
-          <StadiumSection />
-          <LatestNewsSection />
-          <OurTeamSection />
-          <JoinFootballSection />
+      <StadiumSection />
+      <LatestNewsSection />
+      <OurTeamSection />
+      <JoinFootballSection />
 
-          <footer className="border-t px-6 py-12 text-center" style={{ borderColor: P.border, background: P.bg }}>
-            <p className="font-mono-label text-xs tracking-[0.2em]" style={{ color: P.muted }}>
-              OCC Football ·{" "}
-              <Link to="/" className="transition-colors hover:underline" style={{ color: P.green }}>Return home</Link>
-            </p>
-          </footer>
-        </>
-      ) : null}
+      <footer className="border-t px-6 py-12 text-center" style={{ borderColor: P.border, background: P.bg }}>
+        <p className="font-mono-label text-xs tracking-[0.2em]" style={{ color: P.muted }}>
+          OCC Football ·{" "}
+          <Link to="/" className="transition-colors hover:underline" style={{ color: P.green }}>Return home</Link>
+        </p>
+      </footer>
     </div>
   );
 }

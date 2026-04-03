@@ -19,10 +19,10 @@ const FashionPage = dynamic(
   { ssr: false },
 );
 
-export function ClubExperience({ slug, embedded = false }: { slug: string; embedded?: boolean }) {
-  if (slug === "bikers") return <BikersRidePage embedded={embedded} />;
-  if (slug === "sports") return <FootballPage embedded={embedded} />;
-  if (slug === "photography") return <PhotographyPage embedded={embedded} />;
-  if (slug === "fashion") return <FashionPage embedded={embedded} />;
+export function ClubExperience({ slug }: { slug: string }) {
+  if (slug === "bikers") return <BikersRidePage />;
+  if (slug === "sports") return <FootballPage />;
+  if (slug === "photography") return <PhotographyPage />;
+  if (slug === "fashion") return <FashionPage />;
   return null;
 }

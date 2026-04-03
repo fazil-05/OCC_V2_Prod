@@ -144,17 +144,17 @@ function FashionGrainOverlay() {
   );
 }
 
-export function FashionPage({ embedded = false }: { embedded?: boolean }) {
+export function FashionPage() {
   const { frames, loaded, progress } = useFashionFrames(
     FASHION_FRAMES_PATH,
     FASHION_TOTAL_FRAMES,
   );
 
   return (
-    <div className={embedded ? "" : "cursor-none"} style={{ background: FAC.bg, color: FAC.text }}>
+    <div className="cursor-none" style={{ background: FAC.bg, color: FAC.text }}>
       <FashionLoadingScreen progress={progress} loaded={loaded} />
-      {!embedded ? <FashionCursor /> : null}
-      {!embedded ? <FashionGrainOverlay /> : null}
+      <FashionCursor />
+      <FashionGrainOverlay />
 
       <motion.div
         initial={{ clipPath: "inset(0 0 100% 0)" }}
@@ -162,53 +162,47 @@ export function FashionPage({ embedded = false }: { embedded?: boolean }) {
         transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
         style={{ background: FAC.bg }}
       >
-        {!embedded ? (
-          <header className="pointer-events-none fixed top-0 right-0 left-0 z-[100] flex items-center justify-between px-6 py-6 mix-blend-difference md:px-12">
+        <header className="pointer-events-none fixed top-0 right-0 left-0 z-[100] flex items-center justify-between px-6 py-6 mix-blend-difference md:px-12">
+          <Link
+            to="/"
+            className="pointer-events-auto text-[10px] tracking-[0.4em] uppercase"
+            style={{ color: FAC.text }}
+          >
+            ← OCC
+          </Link>
+          <span
+            className="font-headline text-lg tracking-[0.15em] md:text-xl"
+            style={{ color: FAC.text }}
+          >
+            OCC
+          </span>
+          <span className="text-[10px] tracking-[0.3em] uppercase" style={{ color: FAC.muted }}>
+            Fashion
+          </span>
+        </header>
+
+        <FashionScrollSection frames={frames} loaded={loaded} />
+
+        <FashionEditorialSection />
+        <FashionTimelineStrip />
+        <FashionGigsSection />
+        <FashionJoinSection />
+
+        <footer
+          className="border-t px-6 py-12 text-center"
+          style={{ borderColor: "rgba(255,248,235,0.08)", background: "#0C0C0A" }}
+        >
+          <p className="font-mono-label text-xs tracking-[0.2em]" style={{ color: "#8A8478" }}>
+            OCC Fashion ·{" "}
             <Link
               to="/"
-              className="pointer-events-auto text-[10px] tracking-[0.4em] uppercase"
-              style={{ color: FAC.text }}
+              className="transition-colors hover:underline"
+              style={{ color: FAC.accent }}
             >
-              ← OCC
+              Return home
             </Link>
-            <span
-              className="font-headline text-lg tracking-[0.15em] md:text-xl"
-              style={{ color: FAC.text }}
-            >
-              OCC
-            </span>
-            <span className="text-[10px] tracking-[0.3em] uppercase" style={{ color: FAC.muted }}>
-              Fashion
-            </span>
-          </header>
-        ) : null}
-
-        <FashionScrollSection frames={frames} loaded={loaded} embedded={embedded} />
-
-        {!embedded ? (
-          <>
-            <FashionEditorialSection />
-            <FashionTimelineStrip />
-            <FashionGigsSection />
-            <FashionJoinSection />
-
-            <footer
-              className="border-t px-6 py-12 text-center"
-              style={{ borderColor: "rgba(255,248,235,0.08)", background: "#0C0C0A" }}
-            >
-              <p className="font-mono-label text-xs tracking-[0.2em]" style={{ color: "#8A8478" }}>
-                OCC Fashion ·{" "}
-                <Link
-                  to="/"
-                  className="transition-colors hover:underline"
-                  style={{ color: FAC.accent }}
-                >
-                  Return home
-                </Link>
-              </p>
-            </footer>
-          </>
-        ) : null}
+          </p>
+        </footer>
       </motion.div>
     </div>
   );

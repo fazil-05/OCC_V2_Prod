@@ -19,10 +19,9 @@ const HERO_FADE_END = 0.1;
 interface Props {
   frames: HTMLImageElement[];
   loaded?: boolean;
-  embedded?: boolean;
 }
 
-export function FashionScrollSection({ frames, loaded = true, embedded = false }: Props) {
+export function FashionScrollSection({ frames, loaded = true }: Props) {
   const containerRef = useRef<HTMLElement>(null);
   const playhead = useFashionPhysics(containerRef, FASHION_TOTAL_FRAMES);
   const p = playhead.playheadProgress;
@@ -60,7 +59,7 @@ export function FashionScrollSection({ frames, loaded = true, embedded = false }
       id="fashion-section"
       className="relative"
       style={{
-        height: `${embedded ? 260 : FASHION_SCROLL_HEIGHT_VH}vh`,
+        height: `${FASHION_SCROLL_HEIGHT_VH}vh`,
         background: FAC.bg,
       }}
     >

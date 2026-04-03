@@ -1,9 +1,16 @@
 import { notFound } from "next/navigation";
-import { ClubExperience } from "@/components/dashboard/ClubExperience";
+import Link from "next/link";
 import { ClubTabs } from "@/components/dashboard/ClubTabs";
 import { JoinClubButton } from "@/components/dashboard/JoinClubButton";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+
+const CINEMATIC_SLUGS: Record<string, { route: string; label: string; gradient: string }> = {
+  bikers:      { route: "/bikers",      label: "Bikers Ride",    gradient: "from-amber-900/40 via-[#0C0C0A] to-orange-950/30" },
+  sports:      { route: "/football",    label: "Football Club",  gradient: "from-green-900/40 via-[#060606] to-emerald-950/30" },
+  photography: { route: "/photography", label: "Photography",    gradient: "from-yellow-900/30 via-[#0a0a0a] to-amber-950/20" },
+  fashion:     { route: "/fashion",     label: "Fashion Club",   gradient: "from-indigo-900/30 via-[#050505] to-purple-950/20" },
+};
 
 export default async function ClubDetailPage({
   params,
@@ -61,10 +68,20 @@ export default async function ClubDetailPage({
 
   return (
     <div className="space-y-8 pb-10">
-      {["bikers", "sports", "photography", "fashion"].includes(club.slug) ? (
-        <div className="overflow-hidden rounded-[32px] border border-white/8 bg-[#050505]">
-          <ClubExperience slug={club.slug} embedded />
-        </div>
+      {CINEMATIC_SLUGS[club.slug] ? (
+        <Link
+          href={CINEMATIC_SLUGS[club.slug].route}
+          className={`group flex items-center justify-between rounded-[24px] border border-white/8 bg-gradient-to-br ${CINEMATIC_SLUGS[club.slug].gradient} p-6 sm:p-8 transition-all hover:border-white/15 hover:scale-[1.005]`}
+        >
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.5em] text-[#C9A96E] mb-2">Scroll Cinema</p>
+            <h3 className="font-headline text-xl sm:text-2xl text-[#F5F0E8] tracking-wide">
+              Experience {CINEMATIC_SLUGS[club.slug].label}
+            </h3>
+            <p className="mt-1 text-xs text-[#8A8478]">Full-screen scroll animation &amp; cinematic intro</p>
+          </div>
+          <span className="text-[#C9A96E] text-2xl transition-transform group-hover:translate-x-1">→</span>
+        </Link>
       ) : null}
 
       <section className="sticky top-0 z-30 rounded-[24px] border border-white/8 bg-[#0C0C0A]/90 p-5 backdrop-blur-xl">

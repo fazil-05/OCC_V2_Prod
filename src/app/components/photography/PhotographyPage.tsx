@@ -308,17 +308,17 @@ function JoinPhotoSection() {
   );
 }
 
-export function PhotographyPage({ embedded = false }: { embedded?: boolean }) {
+export function PhotographyPage() {
   const { frames, loaded, progress } = usePhotographyFrames(
     PHOTO_FRAMES_PATH,
     PHOTO_TOTAL_FRAMES,
   );
 
   return (
-    <div className={embedded ? "" : "cursor-none"} style={{ background: PC.bg, color: PC.text }}>
+    <div className="cursor-none" style={{ background: PC.bg, color: PC.text }}>
       <PhotoLoadingScreen progress={progress} loaded={loaded} />
-      {!embedded ? <PhotoCursor /> : null}
-      {!embedded ? <GrainOverlay /> : null}
+      <PhotoCursor />
+      <GrainOverlay />
 
       <motion.div
         initial={{ clipPath: "inset(0 0 100% 0)" }}
@@ -326,53 +326,46 @@ export function PhotographyPage({ embedded = false }: { embedded?: boolean }) {
         transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
         style={{ background: PC.bg }}
       >
-        {!embedded ? (
-          <header className="pointer-events-none fixed top-0 right-0 left-0 z-[100] flex items-center justify-between px-6 py-6 mix-blend-difference md:px-12">
+        <header className="pointer-events-none fixed top-0 right-0 left-0 z-[100] flex items-center justify-between px-6 py-6 mix-blend-difference md:px-12">
+          <Link
+            to="/"
+            className="pointer-events-auto text-[10px] tracking-[0.4em] uppercase"
+            style={{ color: PC.text }}
+          >
+            ← OCC
+          </Link>
+          <span
+            className="font-headline text-lg tracking-[0.15em] md:text-xl"
+            style={{ color: PC.text }}
+          >
+            OCC
+          </span>
+          <span className="text-[10px] tracking-[0.3em] uppercase" style={{ color: PC.muted }}>
+            Photography
+          </span>
+        </header>
+
+        <PhotographyScrollSection frames={frames} loaded={loaded} />
+
+        <ShootDaySection />
+        <PhotoGigsSection />
+        <JoinPhotoSection />
+
+        <footer
+          className="border-t px-6 py-12 text-center"
+          style={{ borderColor: PP.border, background: PP.bg }}
+        >
+          <p className="font-mono-label text-xs tracking-[0.2em]" style={{ color: PP.muted }}>
+            OCC Photography ·{" "}
             <Link
               to="/"
-              className="pointer-events-auto text-[10px] tracking-[0.4em] uppercase"
-              style={{ color: PC.text }}
+              className="transition-colors hover:underline"
+              style={{ color: PP.gold }}
             >
-              ← OCC
+              Return home
             </Link>
-            <span
-              className="font-headline text-lg tracking-[0.15em] md:text-xl"
-              style={{ color: PC.text }}
-            >
-              OCC
-            </span>
-            <span className="text-[10px] tracking-[0.3em] uppercase" style={{ color: PC.muted }}>
-              Photography
-            </span>
-          </header>
-        ) : null}
-
-        {/* Single viewport: intro + scroll cinema share the same sticky canvas */}
-        <PhotographyScrollSection frames={frames} loaded={loaded} embedded={embedded} />
-
-        {!embedded ? (
-          <>
-            <ShootDaySection />
-            <PhotoGigsSection />
-            <JoinPhotoSection />
-
-            <footer
-              className="border-t px-6 py-12 text-center"
-              style={{ borderColor: PP.border, background: PP.bg }}
-            >
-              <p className="font-mono-label text-xs tracking-[0.2em]" style={{ color: PP.muted }}>
-                OCC Photography ·{" "}
-                <Link
-                  to="/"
-                  className="transition-colors hover:underline"
-                  style={{ color: PP.gold }}
-                >
-                  Return home
-                </Link>
-              </p>
-            </footer>
-          </>
-        ) : null}
+          </p>
+        </footer>
       </motion.div>
     </div>
   );

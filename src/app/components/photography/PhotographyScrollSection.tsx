@@ -22,10 +22,9 @@ interface Props {
   frames: HTMLImageElement[];
   /** When false, intro stays hidden until frames are ready. */
   loaded?: boolean;
-  embedded?: boolean;
 }
 
-export function PhotographyScrollSection({ frames, loaded = true, embedded = false }: Props) {
+export function PhotographyScrollSection({ frames, loaded = true }: Props) {
   const containerRef = useRef<HTMLElement>(null);
   const playhead = usePhotographyPhysics(containerRef, PHOTO_TOTAL_FRAMES);
   const p = playhead.playheadProgress;
@@ -66,7 +65,7 @@ export function PhotographyScrollSection({ frames, loaded = true, embedded = fal
       id="photography-section"
       className="relative"
       style={{
-        height: `${embedded ? 260 : PHOTO_SCROLL_HEIGHT_VH}vh`,
+        height: `${PHOTO_SCROLL_HEIGHT_VH}vh`,
         background: "#0a0a0a",
       }}
     >

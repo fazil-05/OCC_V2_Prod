@@ -16,10 +16,9 @@ const HERO_FADE_END = 0.1;
 interface Props {
   frames: HTMLImageElement[];
   loaded?: boolean;
-  embedded?: boolean;
 }
 
-export function BikeScrollSection({ frames, loaded = true, embedded = false }: Props) {
+export function BikeScrollSection({ frames, loaded = true }: Props) {
   const containerRef = useRef<HTMLElement>(null);
   const playhead = useBikersPhysics(containerRef, TOTAL_FRAMES);
   const p = playhead.playheadProgress;
@@ -53,7 +52,7 @@ export function BikeScrollSection({ frames, loaded = true, embedded = false }: P
     <section
       ref={containerRef}
       className="relative"
-      style={{ height: `${embedded ? 260 : SCROLL_HEIGHT_VH}vh`, background: "#080808" }}
+      style={{ height: `${SCROLL_HEIGHT_VH}vh`, background: "#080808" }}
     >
       <div
         className="sticky top-0 relative isolate h-[100dvh] w-full overflow-hidden"

@@ -14,69 +14,61 @@ import { GigsSection } from "./GigsSection";
 import { JoinSection } from "./JoinSection";
 import { WheelStoriesSection } from "../WheelStories";
 
-export function BikersRidePage({ embedded = false }: { embedded?: boolean }) {
+export function BikersRidePage() {
   const { frames, loaded, progress } = useBikersFrames(FRAMES_PATH, TOTAL_FRAMES);
 
   return (
-    <div className={embedded ? "" : "cursor-none"} style={{ background: COLORS.bg, color: COLORS.text }}>
+    <div className="cursor-none" style={{ background: COLORS.bg, color: COLORS.text }}>
       <LoadingScreen progress={progress} loaded={loaded} />
-      {!embedded ? <CustomCursor /> : null}
-      {!embedded ? <GrainOverlay /> : null}
+      <CustomCursor />
+      <GrainOverlay />
 
-      {/* Header — mix-blend-difference, always transparent */}
-      {!embedded ? (
-        <header className="pointer-events-none fixed top-0 right-0 left-0 z-[100] flex items-center justify-between px-6 py-6 mix-blend-difference md:px-12">
-          <Link
-            to="/"
-            className="pointer-events-auto text-[10px] tracking-[0.4em] uppercase transition-colors duration-300"
-            style={{ color: COLORS.text }}
-          >
-            ← OCC
+      <header className="pointer-events-none fixed top-0 right-0 left-0 z-[100] flex items-center justify-between px-6 py-6 mix-blend-difference md:px-12">
+        <Link
+          to="/"
+          className="pointer-events-auto text-[10px] tracking-[0.4em] uppercase transition-colors duration-300"
+          style={{ color: COLORS.text }}
+        >
+          ← OCC
+        </Link>
+        <span
+          className="font-headline text-lg tracking-[0.15em] md:text-xl"
+          style={{ color: COLORS.text }}
+        >
+          OCC
+        </span>
+        <span
+          className="text-[10px] tracking-[0.3em] uppercase"
+          style={{ color: COLORS.muted }}
+        >
+          Bikers
+        </span>
+      </header>
+
+      <BikeScrollSection frames={frames} loaded={loaded} />
+
+      <div className="cursor-auto">
+        <WheelStoriesSection />
+      </div>
+
+      <div className="cursor-auto">
+        <EventsSection />
+        <BikersPulseSection />
+        <GigsSection />
+        <JoinSection />
+      </div>
+
+      <footer
+        className="border-t px-6 py-12 text-center"
+        style={{ borderColor: "rgba(255,248,235,0.08)", background: "#0C0C0A" }}
+      >
+        <p className="font-mono-label text-xs tracking-[0.2em]" style={{ color: "#8A8478" }}>
+          OCC Bikers · Scroll Cinema ·{" "}
+          <Link to="/" className="transition-colors hover:underline" style={{ color: COLORS.accent }}>
+            Return home
           </Link>
-          <span
-            className="font-headline text-lg tracking-[0.15em] md:text-xl"
-            style={{ color: COLORS.text }}
-          >
-            OCC
-          </span>
-          <span
-            className="text-[10px] tracking-[0.3em] uppercase"
-            style={{ color: COLORS.muted }}
-          >
-            Bikers
-          </span>
-        </header>
-      ) : null}
-
-      {/* Single viewport: intro + scroll cinema share the same sticky canvas */}
-      <BikeScrollSection frames={frames} loaded={loaded} embedded={embedded} />
-
-      {!embedded ? (
-        <>
-          <div className="cursor-auto">
-            <WheelStoriesSection />
-          </div>
-
-          <div className="cursor-auto">
-            <EventsSection />
-            <BikersPulseSection />
-            <GigsSection />
-            <JoinSection />
-          </div>
-
-          <footer
-            className="border-t px-6 py-12 text-center"
-            style={{ borderColor: "rgba(255,248,235,0.08)", background: "#0C0C0A" }}
-          >
-            <p className="font-mono-label text-xs tracking-[0.2em]" style={{ color: "#8A8478" }}>
-              OCC Bikers · Scroll Cinema ·{" "}
-              <Link to="/" className="transition-colors hover:underline" style={{ color: COLORS.accent }}>
-                Return home
-              </Link>
-            </p>
-          </footer>
-        </>
-      ) : null}
+        </p>
+      </footer>
     </div>
   );
 }
