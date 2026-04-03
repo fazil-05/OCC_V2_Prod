@@ -8,6 +8,8 @@
 html,
 body {
   min-height: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 body {
@@ -105,9 +107,8 @@ a {
   animation: slow-glow 4s infinite ease-in-out;
 }
 
-/* Premium Visual Utilities - Dashboard Specific Zoom */
+/* Dashboard layout — no zoom hack; use proper responsive sizing instead */
 .dashboard-page-zoom {
-  @media screen and (min-width: 1200px) {
-    zoom: 0.9;
-  }
+  width: 100%;
+  min-width: 0;
 }

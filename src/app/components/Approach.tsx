@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useId, useLayoutEffect, useRef, useState } from "react";
+import { motion, useScroll, useTransform } from "motion/react";
 import { MovableBlock } from "./LayoutEditor";
 
 const TUBE_PATH = "M 0 0 C 400 0 700 300 700 800";
 
-/** Decorative tube — fully drawn, not tied to page scroll. */
-function StaticTube() {
+/** Scroll-driven tube — draws downward as the section scrolls into view. */
+function ScrollTube({ containerRef }: { containerRef: React.RefObject<HTMLElement | null> }) {
   const pathRef = useRef<SVGPathElement>(null);
   const filterId = useId().replace(/:/g, "");
   const [pathLen, setPathLen] = useState(2200);
@@ -17,6 +18,13 @@ function StaticTube() {
     const L = el.getTotalLength();
     if (L > 0) setPathLen(L);
   }, []);
+
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start end", "end start"],
+  });
+
+  const dashOffset = useTransform(scrollYProgress, [0, 0.6], [pathLen, 0]);
 
   return (
     <svg
@@ -34,7 +42,7 @@ function StaticTube() {
           </feMerge>
         </filter>
       </defs>
-      <path
+      <motion.path
         ref={pathRef}
         d={TUBE_PATH}
         fill="none"
@@ -43,21 +51,25 @@ function StaticTube() {
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeDasharray={pathLen}
-        strokeDashoffset={0}
-        style={{ filter: `url(#${filterId})` }}
+        style={{ strokeDashoffset: dashOffset, filter: `url(#${filterId})` }}
       />
     </svg>
   );
 }
 
 export function Approach() {
+  const sectionRef = useRef<HTMLElement>(null);
+
   return (
-    <section className="relative isolate w-full max-w-[100vw] overflow-visible bg-[#F6F7FA] px-4 py-24 sm:px-6 md:px-12 md:py-32">
+    <section
+      ref={sectionRef}
+      className="relative isolate w-full max-w-[100vw] overflow-visible bg-[#F6F7FA] px-4 py-24 sm:px-6 md:px-12 md:py-32"
+    >
       <MovableBlock
         id="approach-purple-tube"
         className="pointer-events-none absolute inset-0 z-[1] overflow-visible"
       >
-        <StaticTube />
+        <ScrollTube containerRef={sectionRef} />
       </MovableBlock>
 
       <div className="relative z-20 mx-auto mt-8 grid w-full max-w-[90rem] grid-cols-1 gap-12 md:mt-12 md:grid-cols-2 md:gap-24 lg:gap-32">

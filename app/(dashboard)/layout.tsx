@@ -2,8 +2,6 @@ import { requireUser } from "@/lib/auth";
 import { OCCSidebar } from "@/components/occ-dashboard/OCCSidebar";
 import { OCCHeader } from "@/components/occ-dashboard/OCCHeader";
 import { headers } from "next/headers";
-import { Home, Search, MessageSquare, Plus, MessageCircle, User } from "lucide-react";
-
 export default async function DashboardLayout({
   children,
 }: Readonly<{

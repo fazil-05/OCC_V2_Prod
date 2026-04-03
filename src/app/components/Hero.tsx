@@ -101,7 +101,7 @@ export function Hero() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 1, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              className="relative aspect-video w-full max-w-[min(100%,17rem)] overflow-hidden rounded-[2rem] bg-black/20 shadow-2xl shadow-black/40 ring-1 ring-white/10 backdrop-blur-[2px] transform-gpu sm:max-w-[22rem] md:max-w-xl lg:max-w-2xl xl:max-w-2xl"
+              className="relative aspect-video w-full max-w-[min(100%,22rem)] overflow-hidden rounded-[2rem] bg-black/20 shadow-2xl shadow-black/40 ring-1 ring-white/10 backdrop-blur-[2px] transform-gpu sm:max-w-[26rem] md:max-w-xl lg:max-w-2xl xl:max-w-2xl"
             >
               <video
                 className="pointer-events-none absolute inset-0 h-full w-full object-cover"

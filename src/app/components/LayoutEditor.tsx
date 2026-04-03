@@ -101,34 +101,6 @@ export function LayoutEditorProvider({
   return (
     <LayoutEditorContext.Provider value={value}>
       {children}
-      <div className="fixed bottom-6 right-6 z-[9999] flex flex-wrap items-center justify-end gap-2 max-w-[min(100vw-2rem,24rem)]">
-        {!editorMode ? (
-          <button
-            type="button"
-            onClick={() => setEditorMode(true)}
-            className="hidden sm:block rounded-full bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-slate-900/25 transition hover:bg-slate-800"
-          >
-            Visual layout edit
-          </button>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={resetPositions}
-              className="rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 shadow-md transition hover:bg-slate-50"
-            >
-              Reset positions
-            </button>
-            <button
-              type="button"
-              onClick={() => setEditorMode(false)}
-              className="rounded-full bg-violet-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-violet-600/30 transition hover:bg-violet-500"
-            >
-              Done editing
-            </button>
-          </>
-        )}
-      </div>
     </LayoutEditorContext.Provider>
   );
 }

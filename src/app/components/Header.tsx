@@ -37,7 +37,7 @@ export function Header() {
         <MovableBlock id="header-mobile-join-btn" className="flex sm:hidden">
           <button
             type="button"
-            onClick={() => navigateForAuth(navigate, "/dashboard/explore", "/login")}
+            onClick={() => navigateForAuth(navigate, "/explore", "/login")}
             className="flex items-center justify-center rounded-full bg-slate-800 px-4 py-2 text-[10px] font-bold tracking-wider text-white backdrop-blur-md"
           >
             JOIN
@@ -49,7 +49,7 @@ export function Header() {
           <button
             type="button"
             onClick={() =>
-              navigateForAuth(navigate, "/dashboard/explore", "/login")
+              navigateForAuth(navigate, "/explore", "/login")
             }
             className="flex items-center justify-center rounded-full bg-slate-800 px-5 py-2.5 text-xs font-semibold tracking-wider text-white backdrop-blur-md transition-colors hover:bg-slate-900"
           >

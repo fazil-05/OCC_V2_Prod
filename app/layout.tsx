@@ -33,6 +33,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${cormorant.variable}`}>
+      <head>
+        {process.env.NEXT_PUBLIC_FRAMES_CDN_BASE && (
+          <link
+            rel="dns-prefetch"
+            href={process.env.NEXT_PUBLIC_FRAMES_CDN_BASE}
+          />
+        )}
+        {process.env.NEXT_PUBLIC_FRAMES_CDN_BASE && (
+          <link
+            rel="preconnect"
+            href={process.env.NEXT_PUBLIC_FRAMES_CDN_BASE}
+            crossOrigin="anonymous"
+          />
+        )}
+        <link rel="dns-prefetch" href="https://d8j0ntlcm91z4.cloudfront.net" />
+      </head>
       <body className={`${inter.className} antialiased`}>
         <Toaster position="top-center" richColors theme="dark" />
         {children}

@@ -38,6 +38,7 @@ export function OCCPostCard({ post }: { post: OCCPost }) {
   
   const [isLandscape, setIsLandscape] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
   // Comments state
@@ -82,7 +83,8 @@ export function OCCPostCard({ post }: { post: OCCPost }) {
 
   const handleImageError = () => {
     setIsLoaded(true);
-    setIsLandscape(false);
+    setIsLandscape(true);
+    setImgError(true);
   };
 
   const toggleLike = async () => {
@@ -177,26 +179,39 @@ export function OCCPostCard({ post }: { post: OCCPost }) {
       <div className={`flex flex-col ${isLandscape ? 'flex-col' : 'lg:flex-row'} transition-all duration-700`}>
         
         {/* MEDIA SEGMENT - CINEMATIC FOCUS */}
-        <div className={`relative flex-1 bg-[#121212] flex items-center justify-center overflow-hidden transition-all duration-700 ${isLandscape ? 'h-auto max-h-[400px] sm:max-h-[500px]' : 'lg:max-w-[500px] min-h-[350px] sm:min-h-[400px]'}`}>
-          <div 
-            className="absolute inset-0 opacity-25 blur-[60px] scale-150 pointer-events-none transition-opacity duration-1000"
-            style={{ 
-              backgroundImage: `url(${post.imageUrl || "https://images.unsplash.com/photo-1520975916090-3105956dac38?w=1000&q=80"})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              opacity: isLoaded ? 0.15 : 0
-            }}
-          />
+        <div className={`relative flex-1 bg-[#121212] flex items-center justify-center overflow-hidden transition-all duration-700 ${isLandscape ? 'h-auto max-h-[400px] sm:max-h-[500px]' : 'lg:max-w-[500px] min-h-[250px] sm:min-h-[300px]'}`}>
+          {!imgError && (
+            <div 
+              className="absolute inset-0 opacity-25 blur-[60px] scale-150 pointer-events-none transition-opacity duration-1000"
+              style={{ 
+                backgroundImage: `url(${post.imageUrl})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                opacity: isLoaded ? 0.15 : 0
+              }}
+            />
+          )}
           
-          <motion.img 
-            ref={imgRef}
-            src={post.imageUrl || "https://images.unsplash.com/photo-1520975916090-3105956dac38?w=1000&q=80"} 
-            alt={post.caption} 
-            onLoad={handleImageLoad}
-            onError={handleImageError}
-            className={`relative z-10 transition-all duration-1000 ease-out ${isLoaded ? 'scale-100 opacity-100' : 'opacity-100'} ${isLandscape ? 'w-full h-auto object-cover max-h-[400px] sm:max-h-[500px]' : 'w-full h-full object-contain max-h-[500px] sm:max-h-[600px] lg:max-h-[650px]'}`}
-            onDoubleClick={toggleLike}
-          />
+          {imgError ? (
+            <div
+              className="relative z-10 flex h-[200px] sm:h-[280px] w-full items-center justify-center bg-gradient-to-br from-[#5227FF]/20 via-[#121212] to-[#D4AF37]/20"
+              onDoubleClick={toggleLike}
+            >
+              <span className="text-[11px] sm:text-[13px] font-black uppercase tracking-[0.2em] text-white/20">
+                {post.clubName || "OCC"}
+              </span>
+            </div>
+          ) : (
+            <motion.img 
+              ref={imgRef}
+              src={post.imageUrl} 
+              alt="" 
+              onLoad={handleImageLoad}
+              onError={handleImageError}
+              className={`relative z-10 transition-all duration-1000 ease-out ${isLoaded ? 'scale-100 opacity-100' : 'opacity-100'} ${isLandscape ? 'w-full h-auto object-cover max-h-[400px] sm:max-h-[500px]' : 'w-full h-full object-cover max-h-[500px] sm:max-h-[600px] lg:max-h-[650px]'}`}
+              onDoubleClick={toggleLike}
+            />
+          )}
 
           <AnimatePresence>
             {liked && (
