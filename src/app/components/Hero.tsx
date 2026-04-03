@@ -85,7 +85,7 @@ export function Hero() {
               className="text-center"
             >
               <h1
-                className="font-bold text-[2.5rem] leading-[0.95] sm:text-[3.5rem] md:text-[5.5rem] lg:text-[7rem] xl:text-[8rem] text-white tracking-[-0.04em] drop-shadow-[0_8px_30px_rgb(0,0,0,0.12)] uppercase"
+                className="font-bold text-[1.6rem] leading-[1] sm:text-[2.2rem] md:text-[3.2rem] lg:text-[4rem] xl:text-[4.5rem] text-white tracking-[-0.02em] drop-shadow-[0_8px_30px_rgb(0,0,0,0.12)] uppercase whitespace-nowrap"
                 style={{ fontFamily: '"Homoarak", sans-serif' }}
               >
                 YOUR CREW LIVES<br />OFF CAMPUS
