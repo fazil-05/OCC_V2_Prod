@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { referralValidateSchema } from "@/lib/validations";
-import { normalizeReferralCodeInput, resolveClubHeaderByReferralCode } from "@/lib/referral-resolve";
+import {
+  normalizeReferralCodeInput,
+  resolveClubHeaderByReferralCode,
+  suggestSimilarReferralCode,
+} from "@/lib/referral-resolve";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +29,11 @@ export async function POST(req: NextRequest) {
 
     const resolved = await resolveClubHeaderByReferralCode(normalized);
     if (!resolved) {
-      return NextResponse.json({ valid: false });
+      const suggestion = await suggestSimilarReferralCode(normalized);
+      return NextResponse.json({
+        valid: false,
+        ...(suggestion ? { suggestion } : {}),
+      });
     }
 
     const { header, club } = resolved;

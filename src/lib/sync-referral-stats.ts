@@ -5,7 +5,18 @@ import { prisma } from "@/lib/prisma";
  * (e.g. older onboarding runs or partial failures) so club headers see them in /header/members.
  */
 export async function ensureReferralStatsForClubHeader(headerId: string): Promise<void> {
-  const club = await prisma.club.findFirst({ where: { headerId } });
+  let club = await prisma.club.findFirst({ where: { headerId } });
+  if (!club) {
+    const u = await prisma.user.findUnique({
+      where: { id: headerId },
+      select: { clubManagedId: true, pendingLeadClubId: true },
+    });
+    if (u?.clubManagedId) {
+      club = await prisma.club.findUnique({ where: { id: u.clubManagedId } });
+    } else if (u?.pendingLeadClubId) {
+      club = await prisma.club.findUnique({ where: { id: u.pendingLeadClubId } });
+    }
+  }
   if (!club) return;
 
   const referredStudents = await prisma.user.findMany({

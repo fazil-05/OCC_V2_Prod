@@ -26,9 +26,22 @@ function RegisterPageInner() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [referralCode, setReferralCode] = useState("");
-  const [referralMeta, setReferralMeta] = useState<{ valid: boolean; club?: { name: string }; headerName?: string } | null>(null);
+  const [referralMeta, setReferralMeta] = useState<{
+    valid: boolean;
+    club?: { name: string };
+    headerName?: string;
+    suggestion?: string | null;
+  } | null>(null);
   const [referralChecking, setReferralChecking] = useState(false);
   const referralValidateSeq = useRef(0);
+
+  // Pre-fill from /register?ref=CODE (matches ReferralCodeCard share link)
+  useEffect(() => {
+    const ref = searchParams.get("ref")?.trim();
+    if (ref && ref.length >= REFERRAL_CODE_MIN_LEN) {
+      setReferralCode((prev) => (prev ? prev : ref.toUpperCase()));
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const trimmed = referralCode.trim();
@@ -54,11 +67,26 @@ function RegisterPageInner() {
           body: JSON.stringify({ code: trimmed }),
           cache: "no-store",
         });
-        const data = (await res.json()) as { valid?: boolean; club?: { name: string }; headerName?: string };
+        const data = (await res.json()) as {
+          valid?: boolean;
+          club?: { name: string };
+          headerName?: string;
+          suggestion?: string;
+        };
         if (requestId !== referralValidateSeq.current) return;
         setReferralMeta(
           data && typeof data.valid === "boolean"
-            ? { valid: data.valid, club: data.club, headerName: data.headerName }
+            ? {
+                valid: data.valid,
+                club: data.club,
+                headerName: data.headerName,
+                suggestion:
+                  !data.valid &&
+                  typeof data.suggestion === "string" &&
+                  data.suggestion.length >= REFERRAL_CODE_MIN_LEN
+                    ? data.suggestion
+                    : null,
+              }
             : { valid: false },
         );
       } catch {
@@ -360,7 +388,25 @@ function RegisterPageInner() {
               referralMeta &&
               !referralMeta.valid &&
               !referralChecking ? (
-              <p className="mt-1 text-xs text-red-500 font-bold ml-1">Invalid referral code</p>
+              <div className="mt-2 space-y-2">
+                <p className="text-xs text-red-600 font-semibold ml-1">
+                  We couldn&apos;t verify that code. Enter it exactly as your club leader shared it, or tap a suggestion if shown.
+                </p>
+                {referralMeta.suggestion ? (
+                  <div className="flex flex-wrap items-center gap-2 ml-1">
+                    <span className="text-xs text-gray-600">
+                      Did you mean <strong className="font-mono text-emerald-700">{referralMeta.suggestion}</strong>?
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setReferralCode(referralMeta.suggestion!)}
+                      className="rounded-lg border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800 hover:bg-emerald-100"
+                    >
+                      Use {referralMeta.suggestion}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
             ) : null}
           </div>
 

@@ -29,6 +29,7 @@ export default function OnboardingPage() {
   const [codeValidating, setCodeValidating] = useState(false);
   const [codeValid, setCodeValid] = useState<boolean | null>(null);
   const [clubInfo, setClubInfo] = useState<{name: string, headerName: string} | null>(null);
+  const [codeSuggestion, setCodeSuggestion] = useState<string | null>(null);
 
   const referralValidateSeq = useRef(0);
 
@@ -38,12 +39,14 @@ export default function OnboardingPage() {
     if (!trimmed) {
       setCodeValid(null);
       setClubInfo(null);
+      setCodeSuggestion(null);
       setCodeValidating(false);
       return;
     }
     if (trimmed.length < REFERRAL_CODE_MIN_LEN) {
       setCodeValid(null);
       setClubInfo(null);
+      setCodeSuggestion(null);
       setCodeValidating(false);
       return;
     }
@@ -58,20 +61,32 @@ export default function OnboardingPage() {
           body: JSON.stringify({ code: trimmed }),
           cache: "no-store",
         });
-        const data = await res.json();
+        const data = (await res.json()) as {
+          valid?: boolean;
+          club?: { name: string };
+          headerName?: string;
+          suggestion?: string;
+        };
         if (requestId !== referralValidateSeq.current) return;
 
         if (data.valid) {
           setCodeValid(true);
+          setCodeSuggestion(null);
           setClubInfo({ name: data.club?.name || "the club", headerName: data.headerName });
         } else {
           setCodeValid(false);
           setClubInfo(null);
+          setCodeSuggestion(
+            typeof data.suggestion === "string" && data.suggestion.length >= REFERRAL_CODE_MIN_LEN
+              ? data.suggestion
+              : null,
+          );
         }
       } catch {
         if (requestId !== referralValidateSeq.current) return;
         setCodeValid(false);
         setClubInfo(null);
+        setCodeSuggestion(null);
       } finally {
         if (requestId === referralValidateSeq.current) {
           setCodeValidating(false);
@@ -207,7 +222,10 @@ export default function OnboardingPage() {
                   Got an invite?
                 </h1>
                 <p className="text-lg text-white/50">
-                  Enter your referral code to join a specific club. You can skip this if you don't have one.
+                  Enter your referral code to join a specific club. You can skip this if you don&apos;t have one.
+                </p>
+                <p className="text-sm text-white/35 mt-2">
+                  Use the exact code from your club leader (letters only). A single missing or extra letter will fail—try the suggested fix if we show one.
                 </p>
               </div>
 
@@ -249,10 +267,28 @@ export default function OnboardingPage() {
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="flex items-center space-x-2 text-rose-400 text-sm font-medium bg-rose-400/10 px-4 py-3 rounded-lg border border-rose-400/20 overflow-hidden"
+                      className="space-y-3 text-rose-400 text-sm font-medium bg-rose-400/10 px-4 py-3 rounded-lg border border-rose-400/20 overflow-hidden"
                     >
-                      {React.createElement(XCircle as any, { className: "w-4 h-4 shrink-0" })}
-                      <span>Invalid or expired referral code.</span>
+                      <div className="flex items-start gap-2">
+                        {React.createElement(XCircle as any, { className: "w-4 h-4 shrink-0 mt-0.5" })}
+                        <span>
+                          We couldn&apos;t verify that code. Compare it letter-for-letter with your leader&apos;s code, or use a suggestion below if one appears.
+                        </span>
+                      </div>
+                      {codeSuggestion ? (
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 pl-6 border-t border-rose-400/20 pt-3">
+                          <span className="text-white/80 text-xs font-normal">
+                            Did you mean <strong className="font-mono text-emerald-300">{codeSuggestion}</strong>?
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setReferralCode(codeSuggestion)}
+                            className="rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/30 w-fit"
+                          >
+                            Use {codeSuggestion}
+                          </button>
+                        </div>
+                      ) : null}
                     </motion.div>
                   )}
                 </AnimatePresence>
