@@ -2,9 +2,12 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ClubHeaderReferralRealtime } from "@/components/club-header/ClubHeaderReferralRealtime";
 import { MembersTable } from "@/components/club-header/MembersTable";
+import { ensureReferralStatsForClubHeader } from "@/lib/sync-referral-stats";
 
 export default async function HeaderMembersPage() {
   const user = await requireUser();
+  await ensureReferralStatsForClubHeader(user.id);
+
   const members = await prisma.referralStat.findMany({
     where: { clubHeaderId: user.id },
     include: { student: true },

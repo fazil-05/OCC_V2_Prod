@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { HeaderOverviewClient } from "@/components/club-header/HeaderOverviewClient";
+import { ensureReferralStatsForClubHeader } from "@/lib/sync-referral-stats";
 
 export default async function HeaderDashboardPage() {
   const user = await requireUser();
+  await ensureReferralStatsForClubHeader(user.id);
 
   const [membersCount, postsCount] = await Promise.all([
     prisma.referralStat.count({ where: { clubHeaderId: user.id } }),

@@ -55,7 +55,8 @@ export default function OnboardingPage() {
         const res = await fetch("/api/referral/validate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code: trimmed.toUpperCase() }),
+          body: JSON.stringify({ code: trimmed }),
+          cache: "no-store",
         });
         const data = await res.json();
         if (requestId !== referralValidateSeq.current) return;

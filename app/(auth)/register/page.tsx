@@ -52,6 +52,7 @@ function RegisterPageInner() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ code: trimmed }),
+          cache: "no-store",
         });
         const data = (await res.json()) as { valid?: boolean; club?: { name: string }; headerName?: string };
         if (requestId !== referralValidateSeq.current) return;

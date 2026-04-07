@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { referralValidateSchema } from "@/lib/validations";
+import { normalizeReferralCodeInput, resolveClubHeaderByReferralCode } from "@/lib/referral-resolve";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,27 +18,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ valid: false });
     }
 
-    const normalized = parsed.data.code.trim().toUpperCase();
-
-    const header = await prisma.user.findUnique({
-      where: { referralCode: normalized },
-      include: { clubManaged: true },
-    });
-
-    const club =
-      header?.clubManaged ??
-      (header
-        ? await prisma.club.findFirst({ where: { headerId: header.id } })
-        : null);
-
-    if (
-      !header ||
-      header.role !== "CLUB_HEADER" ||
-      header.approvalStatus !== "APPROVED" ||
-      !club
-    ) {
+    const normalized = normalizeReferralCodeInput(parsed.data.code);
+    if (!normalized) {
       return NextResponse.json({ valid: false });
     }
+
+    const resolved = await resolveClubHeaderByReferralCode(normalized);
+    if (!resolved) {
+      return NextResponse.json({ valid: false });
+    }
+
+    const { header, club } = resolved;
 
     return NextResponse.json({
       valid: true,

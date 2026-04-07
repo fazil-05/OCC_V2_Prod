@@ -1,10 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher";
-import { REFERRAL_CODE_MIN_LEN } from "@/lib/validations";
+import { resolveClubHeaderByReferralCode } from "@/lib/referral-resolve";
 
 /**
  * Links a student to a club header by referral code (membership + referral_stats + notification + Pusher).
- * Handles club resolution via User.clubManaged OR Club.headerId.
  */
 export async function attachStudentToReferralCode(params: {
   studentId: string;
@@ -12,30 +11,12 @@ export async function attachStudentToReferralCode(params: {
   studentCollegeName: string;
   codeRaw: string;
 }): Promise<{ ok: true } | { ok: false }> {
-  const code = params.codeRaw.trim().toUpperCase();
-  if (code.length < REFERRAL_CODE_MIN_LEN) {
+  const resolved = await resolveClubHeaderByReferralCode(params.codeRaw);
+  if (!resolved) {
     return { ok: false };
   }
 
-  const headerUser = await prisma.user.findUnique({
-    where: { referralCode: code },
-    include: { clubManaged: true },
-  });
-
-  const managedClub =
-    headerUser?.clubManaged ??
-    (headerUser
-      ? await prisma.club.findFirst({ where: { headerId: headerUser.id } })
-      : null);
-
-  if (
-    !headerUser ||
-    headerUser.role !== "CLUB_HEADER" ||
-    headerUser.approvalStatus !== "APPROVED" ||
-    !managedClub
-  ) {
-    return { ok: false };
-  }
+  const { header: headerUser, club: managedClub } = resolved;
 
   try {
     await prisma.user.update({
@@ -51,32 +32,41 @@ export async function attachStudentToReferralCode(params: {
       create: { userId: params.studentId, clubId: managedClub.id },
     });
 
-    await prisma.referralStat.create({
-      data: {
+    const existingStat = await prisma.referralStat.findFirst({
+      where: {
         clubHeaderId: headerUser.id,
         studentId: params.studentId,
-        clubId: managedClub.id,
       },
     });
 
-    await prisma.notification.create({
-      data: {
-        userId: headerUser.id,
-        type: "new-referral",
-        title: "New student joined",
-        message: `${params.studentFullName} joined using your referral code.`,
-        data: { studentId: params.studentId },
-      },
-    });
+    if (!existingStat) {
+      await prisma.referralStat.create({
+        data: {
+          clubHeaderId: headerUser.id,
+          studentId: params.studentId,
+          clubId: managedClub.id,
+        },
+      });
 
-    await pusherServer.trigger(`header-${headerUser.id}`, "new-member", {
-      member: {
-        id: params.studentId,
-        fullName: params.studentFullName,
-        collegeName: params.studentCollegeName,
-        registeredAt: new Date().toISOString(),
-      },
-    });
+      await prisma.notification.create({
+        data: {
+          userId: headerUser.id,
+          type: "new-referral",
+          title: "New student joined",
+          message: `${params.studentFullName} joined using your referral code.`,
+          data: { studentId: params.studentId },
+        },
+      });
+
+      await pusherServer.trigger(`header-${headerUser.id}`, "new-member", {
+        member: {
+          id: params.studentId,
+          fullName: params.studentFullName,
+          collegeName: params.studentCollegeName,
+          registeredAt: new Date().toISOString(),
+        },
+      });
+    }
   } catch (e) {
     console.warn("[attach-referral] failed:", e);
     return { ok: false };
