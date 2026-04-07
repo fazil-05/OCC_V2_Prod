@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { Loader2, CheckCircle2, XCircle, ArrowRight, MessageCircle, Globe, Users, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
+import { REFERRAL_CODE_MIN_LEN } from "@/lib/validations";
 
 const REFERRAL_SOURCES = [
   { id: "Instagram", icon: Globe },
@@ -29,24 +30,36 @@ export default function OnboardingPage() {
   const [codeValid, setCodeValid] = useState<boolean | null>(null);
   const [clubInfo, setClubInfo] = useState<{name: string, headerName: string} | null>(null);
 
+  const referralValidateSeq = useRef(0);
+
   // Debounce referral code validation
   useEffect(() => {
-    if (!referralCode) {
+    const trimmed = referralCode.trim();
+    if (!trimmed) {
       setCodeValid(null);
       setClubInfo(null);
+      setCodeValidating(false);
+      return;
+    }
+    if (trimmed.length < REFERRAL_CODE_MIN_LEN) {
+      setCodeValid(null);
+      setClubInfo(null);
+      setCodeValidating(false);
       return;
     }
 
+    const requestId = ++referralValidateSeq.current;
     const validateCode = async () => {
       setCodeValidating(true);
       try {
         const res = await fetch("/api/referral/validate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code: referralCode.trim().toUpperCase() }),
+          body: JSON.stringify({ code: trimmed.toUpperCase() }),
         });
         const data = await res.json();
-        
+        if (requestId !== referralValidateSeq.current) return;
+
         if (data.valid) {
           setCodeValid(true);
           setClubInfo({ name: data.club?.name || "the club", headerName: data.headerName });
@@ -54,16 +67,22 @@ export default function OnboardingPage() {
           setCodeValid(false);
           setClubInfo(null);
         }
-      } catch (err) {
+      } catch {
+        if (requestId !== referralValidateSeq.current) return;
         setCodeValid(false);
         setClubInfo(null);
       } finally {
-        setCodeValidating(false);
+        if (requestId === referralValidateSeq.current) {
+          setCodeValidating(false);
+        }
       }
     };
 
     const timer = setTimeout(validateCode, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      referralValidateSeq.current++;
+    };
   }, [referralCode]);
 
   const handleNextStep = () => {
@@ -222,7 +241,9 @@ export default function OnboardingPage() {
                       <span>Valid code! You'll be joining <strong>{clubInfo.name}</strong> alongside {clubInfo.headerName}.</span>
                     </motion.div>
                   )}
-                  {codeValid === false && referralCode.length > 0 && (
+                  {codeValid === false &&
+                    referralCode.trim().length >= REFERRAL_CODE_MIN_LEN &&
+                    !codeValidating && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}

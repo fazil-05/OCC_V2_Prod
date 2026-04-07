@@ -1,2 +1,5 @@
-/** OCC app mark in /public — favicon metadata, sidebars, and in-app logos. */
-export const OCC_BRAND_ICON = "/occ-logo.png" as const;
+/**
+ * OCC app mark — must exist under `public/` so crawlers (Google) and browsers resolve the same URL.
+ * (Previously `/occ-logo.png` was missing from the repo, so search showed Vercel’s default icon.)
+ */
+export const OCC_BRAND_ICON = "/favicon.svg" as const;

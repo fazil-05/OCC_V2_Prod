@@ -24,20 +24,22 @@ export const metadata: Metadata = {
   title: "OCC — Off Campus Clubs for Gen Z",
   description: "Off Campus Clubs connects students across colleges through clubs, gigs, events, and premium scroll-driven experiences.",
   metadataBase: new URL("https://www.offcampusclub.com"), // Setting this helps with absolute image paths
+  manifest: "/site.webmanifest",
   icons: {
-    icon: [{ url: OCC_BRAND_ICON, type: "image/png" }],
+    icon: [{ url: OCC_BRAND_ICON, type: "image/svg+xml", sizes: "any" }],
     shortcut: OCC_BRAND_ICON,
-    apple: [{ url: OCC_BRAND_ICON, type: "image/png" }],
+    apple: [{ url: OCC_BRAND_ICON, type: "image/svg+xml" }],
   },
   openGraph: {
     title: "OCC — Off Campus Clubs for Gen Z",
     description: "The ultimate platform for college student clubs. Join clubs, host events, and build your network.",
-    images: [{ url: OCC_BRAND_ICON, width: 1200, height: 630, alt: "OCC Logo" }],
+    // Use a 1200×630 PNG here when available; SVG is not ideal for all OG consumers.
+    images: [{ url: OCC_BRAND_ICON, width: 512, height: 512, alt: "OCC" }],
     type: "website",
     url: "https://www.offcampusclub.com",
   },
   twitter: {
-    card: "summary_large_image",
+    card: "summary",
     title: "OCC — Off Campus Clubs for Gen Z",
     description: "The ultimate platform for college student clubs.",
     images: [OCC_BRAND_ICON],

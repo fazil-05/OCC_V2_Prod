@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher";
+import { REFERRAL_CODE_MIN_LEN } from "@/lib/validations";
 
 /**
  * Links a student to a club header by referral code (membership + referral_stats + notification + Pusher).
@@ -12,7 +13,7 @@ export async function attachStudentToReferralCode(params: {
   codeRaw: string;
 }): Promise<{ ok: true } | { ok: false }> {
   const code = params.codeRaw.trim().toUpperCase();
-  if (code.length < 3) {
+  if (code.length < REFERRAL_CODE_MIN_LEN) {
     return { ok: false };
   }
 

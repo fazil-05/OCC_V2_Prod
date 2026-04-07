@@ -169,9 +169,11 @@ export const clubHeaderRegisterSchema = z
     path: ["confirmPassword"],
   });
 
+/** Minimum length for club referral codes (matches PATCH /api/club-header/referral). */
+export const REFERRAL_CODE_MIN_LEN = 3;
+
 export const referralValidateSchema = z.object({
-  /** Must match club-header custom codes (min 3 on PATCH). */
-  code: z.string().min(3),
+  code: z.string().trim().min(REFERRAL_CODE_MIN_LEN).max(48),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;

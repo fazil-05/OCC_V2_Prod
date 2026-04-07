@@ -1,12 +1,13 @@
 "use client";
 
-import React, { Suspense, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import Link from "next/link";
 import { Loader2, Mail, CheckCircle2, ShieldCheck, Sparkles } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/app/components/ui/input-otp";
 import { Interactive3DModel } from "@/app/components/auth/Interactive3DModel";
+import { REFERRAL_CODE_MIN_LEN } from "@/lib/validations";
 
 function RegisterPageInner() {
   const router = useRouter();
@@ -27,6 +28,7 @@ function RegisterPageInner() {
   const [referralCode, setReferralCode] = useState("");
   const [referralMeta, setReferralMeta] = useState<{ valid: boolean; club?: { name: string }; headerName?: string } | null>(null);
   const [referralChecking, setReferralChecking] = useState(false);
+  const referralValidateSeq = useRef(0);
 
   useEffect(() => {
     const trimmed = referralCode.trim();
@@ -35,7 +37,14 @@ function RegisterPageInner() {
       setReferralChecking(false);
       return;
     }
+    // Don’t call the API until the code can be valid — short inputs were returning { valid: false } and looked like “invalid code”.
+    if (trimmed.length < REFERRAL_CODE_MIN_LEN) {
+      setReferralMeta(null);
+      setReferralChecking(false);
+      return;
+    }
 
+    const requestId = ++referralValidateSeq.current;
     setReferralChecking(true);
     const timer = window.setTimeout(async () => {
       try {
@@ -45,19 +54,26 @@ function RegisterPageInner() {
           body: JSON.stringify({ code: trimmed }),
         });
         const data = (await res.json()) as { valid?: boolean; club?: { name: string }; headerName?: string };
+        if (requestId !== referralValidateSeq.current) return;
         setReferralMeta(
           data && typeof data.valid === "boolean"
             ? { valid: data.valid, club: data.club, headerName: data.headerName }
             : { valid: false },
         );
       } catch {
+        if (requestId !== referralValidateSeq.current) return;
         setReferralMeta({ valid: false });
       } finally {
-        setReferralChecking(false);
+        if (requestId === referralValidateSeq.current) {
+          setReferralChecking(false);
+        }
       }
     }, 450);
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      referralValidateSeq.current++;
+    };
   }, [referralCode]);
 
   const sendVerificationCode = async () => {
@@ -165,7 +181,7 @@ function RegisterPageInner() {
     params.set("redirect", "/dashboard");
     params.set("from", "register");
     const code = referralCode.trim().toUpperCase();
-    if (code.length >= 3) {
+    if (code.length >= REFERRAL_CODE_MIN_LEN) {
       params.set("referral", code);
     }
     window.location.assign(`/api/auth/google/start?${params.toString()}`);
@@ -327,7 +343,7 @@ function RegisterPageInner() {
               className={`w-full px-5 py-4 bg-white border-2 rounded-2xl text-sm font-bold text-gray-900 placeholder:text-gray-500 placeholder:uppercase placeholder:font-black placeholder:tracking-widest focus:outline-none focus:border-gray-900 focus:ring-4 transition-all ${referralMeta?.valid ? "border-emerald-500 focus:ring-emerald-500/5 focus:border-emerald-500" : "border-gray-400 focus:ring-gray-900/5"
                 }`}
             />
-            {referralChecking && referralCode.trim().length >= 3 ? (
+            {referralChecking && referralCode.trim().length >= REFERRAL_CODE_MIN_LEN ? (
               <p className="mt-1 text-xs text-gray-400 ml-1">Checking code…</p>
             ) : null}
             <p className="mt-2 text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Ask your Club Leader for their code</p>
@@ -339,7 +355,10 @@ function RegisterPageInner() {
                   <p className="text-xs text-emerald-600/80 font-medium pt-0.5">Joining as a member under {referralMeta.headerName}</p>
                 </div>
               </div>
-            ) : referralCode && referralMeta && !referralMeta.valid ? (
+            ) : referralCode.trim().length >= REFERRAL_CODE_MIN_LEN &&
+              referralMeta &&
+              !referralMeta.valid &&
+              !referralChecking ? (
               <p className="mt-1 text-xs text-red-500 font-bold ml-1">Invalid referral code</p>
             ) : null}
           </div>
