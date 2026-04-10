@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const userId = user.id;
 
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest) {
 
   async function tryVercelBlob(): Promise<string | null> {
     if (!process.env.BLOB_READ_WRITE_TOKEN) return null;
-    const fileName = `uploads/${user.id}/${randomUUID()}.${ext}`;
+    const fileName = `uploads/${userId}/${randomUUID()}.${ext}`;
     const blob = await put(fileName, file, {
       access: "public",
       contentType: file.type || "application/octet-stream",
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest) {
       }
       if (isDev) {
         try {
-          const url = await saveToLocalDisk(user.id, ext, bytes);
+          const url = await saveToLocalDisk(userId, ext, bytes);
           console.warn("[upload] Dev fallback: saved to disk. Cloudinary error:", msg);
           return NextResponse.json({ success: true, url });
         } catch (localErr) {
@@ -129,7 +130,7 @@ export async function POST(req: NextRequest) {
       console.error("[upload] Blob failed:", e);
       if (isDev) {
         try {
-          const url = await saveToLocalDisk(user.id, ext, bytes);
+          const url = await saveToLocalDisk(userId, ext, bytes);
           return NextResponse.json({
             success: true,
             url,
@@ -149,7 +150,7 @@ export async function POST(req: NextRequest) {
   // 3) Local disk — development without cloud
   if (isDev) {
     try {
-      const url = await saveToLocalDisk(user.id, ext, bytes);
+      const url = await saveToLocalDisk(userId, ext, bytes);
       return NextResponse.json({ success: true, url });
     } catch (e) {
       console.error("[upload] Local write failed:", e);
