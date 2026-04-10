@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdminPermission } from "@/lib/admin-api-guard";
+import { requireAdminMutationPermission, requireAdminPermission } from "@/lib/admin-api-guard";
 import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 
@@ -14,7 +14,11 @@ const patchSchema = z.object({
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const admin = await requireAdminPermission("posts", "update");
+  const admin = await requireAdminMutationPermission(req, "posts", "update", {
+    rateAction: "posts:update",
+    limit: 40,
+    windowMs: 60_000,
+  });
   if (admin instanceof NextResponse) return admin;
 
   const body = patchSchema.parse(await req.json().catch(() => ({})));
@@ -45,8 +49,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   return NextResponse.json({ success: true });
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const admin = await requireAdminPermission("posts", "delete");
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  const admin = await requireAdminMutationPermission(req, "posts", "delete", {
+    rateAction: "posts:delete",
+    limit: 20,
+    windowMs: 60_000,
+  });
   if (admin instanceof NextResponse) return admin;
 
   await prisma.post.delete({ where: { id: params.id } });

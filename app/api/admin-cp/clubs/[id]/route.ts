@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdminPermission } from "@/lib/admin-api-guard";
+import { requireAdminMutationPermission, requireAdminPermission } from "@/lib/admin-api-guard";
 import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 
@@ -31,7 +31,11 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const admin = await requireAdminPermission("clubs", "update");
+  const admin = await requireAdminMutationPermission(req, "clubs", "update", {
+    rateAction: "clubs:update",
+    limit: 25,
+    windowMs: 60_000,
+  });
   if (admin instanceof NextResponse) return admin;
 
   const body = patchSchema.parse(await req.json().catch(() => ({})));
@@ -61,8 +65,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   return NextResponse.json({ success: true, club });
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const admin = await requireAdminPermission("clubs", "delete");
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  const admin = await requireAdminMutationPermission(req, "clubs", "delete", {
+    rateAction: "clubs:delete",
+    limit: 10,
+    windowMs: 60_000,
+  });
   if (admin instanceof NextResponse) return admin;
 
   const club = await prisma.club.findUnique({ where: { id: params.id }, select: { name: true } });

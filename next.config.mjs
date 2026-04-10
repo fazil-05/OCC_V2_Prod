@@ -3,6 +3,10 @@ import bundleAnalyzer from "@next/bundle-analyzer";
 
 // Keep this in sync with middleware matcher to avoid auth bypass from prefix drift.
 const staffPrefix = "/k9xm2p7qv4nw8-stf";
+const adminCpPrefix = (process.env.NEXT_PUBLIC_OCC_ADMIN_CP_PREFIX || "/k9xm2p7qv4nw8-admin-control-panel").replace(
+  /\/$/,
+  "",
+);
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
@@ -34,10 +38,10 @@ const nextConfig = {
       { source: `${staffPrefix}/:path+`, destination: "/staff-panel-internal/:path+" },
       { source: `${staffPrefix}`, destination: "/staff-panel-internal" },
       // Admin Control Panel rewrites (with + without trailing slash)
-      { source: "/k9xm2p7qv4nw8-admin-control-panel/", destination: "/admin-control-panel-internal" },
-      { source: "/k9xm2p7qv4nw8-admin-control-panel/:path+/", destination: "/admin-control-panel-internal/:path+" },
-      { source: "/k9xm2p7qv4nw8-admin-control-panel/:path+", destination: "/admin-control-panel-internal/:path+" },
-      { source: "/k9xm2p7qv4nw8-admin-control-panel", destination: "/admin-control-panel-internal" },
+      { source: `${adminCpPrefix}/`, destination: "/admin-control-panel-internal" },
+      { source: `${adminCpPrefix}/:path+/`, destination: "/admin-control-panel-internal/:path+" },
+      { source: `${adminCpPrefix}/:path+`, destination: "/admin-control-panel-internal/:path+" },
+      { source: `${adminCpPrefix}`, destination: "/admin-control-panel-internal" },
     ];
   },
 
@@ -89,7 +93,7 @@ const nextConfig = {
   },
 
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   webpack: (config, { dev }) => {
     config.resolve.alias = {

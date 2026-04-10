@@ -1,18 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdminPermission } from "@/lib/admin-api-guard";
+import { requireAdminMutationPermission } from "@/lib/admin-api-guard";
 import { logAudit } from "@/lib/audit";
 import { invalidateGigsListCache, broadcastEClubs } from "@/lib/gigs-realtime";
+import { z } from "zod";
+
+const gigPatchSchema = z
+  .object({
+    title: z.string().min(1).max(160).optional(),
+    description: z.string().max(5000).optional(),
+    payMin: z.number().finite().min(0).max(1_000_000).optional(),
+    payMax: z.number().finite().min(0).max(1_000_000).optional(),
+    deadline: z.string().nullable().optional(),
+  })
+  .strict();
 
 export async function PATCH(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const admin = await requireAdminPermission("gigs", "update");
+  const admin = await requireAdminMutationPermission(req, "gigs", "update", {
+    rateAction: "gigs:update",
+    limit: 30,
+    windowMs: 60_000,
+  });
   if (admin instanceof NextResponse) return admin;
 
   const { id } = await ctx.params;
-  const body = await req.json();
+  const parsed = gigPatchSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) return NextResponse.json({ error: "Invalid gig payload" }, { status: 400 });
+  const body = parsed.data;
   const data: Record<string, any> = {};
   if (body.title) data.title = body.title;
   if (body.description) data.description = body.description;
@@ -45,10 +62,14 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const admin = await requireAdminPermission("gigs", "delete");
+  const admin = await requireAdminMutationPermission(req, "gigs", "delete", {
+    rateAction: "gigs:delete",
+    limit: 20,
+    windowMs: 60_000,
+  });
   if (admin instanceof NextResponse) return admin;
 
   const { id } = await ctx.params;

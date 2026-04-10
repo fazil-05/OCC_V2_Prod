@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdminPermission } from "@/lib/admin-api-guard";
+import { requireAdminMutationPermission, requireAdminPermission } from "@/lib/admin-api-guard";
 import { logAudit } from "@/lib/audit";
 
 export async function GET() {
@@ -21,16 +21,17 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
-  const admin = await requireAdminPermission("feature_flags", "update");
+  const admin = await requireAdminMutationPermission(req, "feature_flags", "update", {
+    rateAction: "feature_flags:update",
+    limit: 20,
+    windowMs: 60_000,
+  });
   if (admin instanceof NextResponse) return admin;
 
-  const body = await req.json();
+  const body = await req.json().catch(() => ({}));
   const data: Record<string, unknown> = {};
   if (body.featureFlags !== undefined) data.featureFlags = body.featureFlags;
   if (body.rateLimitPolicy !== undefined) data.rateLimitPolicy = body.rateLimitPolicy;
-  if (body.legalPrivacyHtml !== undefined) data.legalPrivacyHtml = body.legalPrivacyHtml;
-  if (body.legalTermsHtml !== undefined) data.legalTermsHtml = body.legalTermsHtml;
-  if (body.landingCmsExtra !== undefined) data.landingCmsExtra = body.landingCmsExtra;
 
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "No valid fields" }, { status: 400 });

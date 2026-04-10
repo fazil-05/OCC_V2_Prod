@@ -32,6 +32,34 @@ export type AuditEntity =
   | "moderation"
   | "broadcast";
 
+const SENSITIVE_DETAIL_KEYS = [
+  "password",
+  "token",
+  "secret",
+  "authorization",
+  "cookie",
+  "otp",
+  "referralcode",
+  "apikey",
+] as const;
+
+function sanitizeAuditDetails(input: unknown): unknown {
+  if (input == null) return input;
+  if (Array.isArray(input)) return input.slice(0, 100).map((v) => sanitizeAuditDetails(v));
+  if (typeof input !== "object") return input;
+
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
+    const keyNorm = k.toLowerCase().replace(/[\s_-]/g, "");
+    if (SENSITIVE_DETAIL_KEYS.some((s) => keyNorm.includes(s))) {
+      out[k] = "[REDACTED]";
+      continue;
+    }
+    out[k] = sanitizeAuditDetails(v);
+  }
+  return out;
+}
+
 export async function logAudit(params: {
   adminId: string;
   adminEmail: string;
@@ -49,7 +77,7 @@ export async function logAudit(params: {
         action: params.action,
         entity: params.entity,
         entityId: params.entityId ?? null,
-        details: params.details ?? null,
+        details: params.details ? (sanitizeAuditDetails(params.details) as Record<string, unknown>) : null,
         ipAddress: params.ipAddress ?? null,
       },
     });

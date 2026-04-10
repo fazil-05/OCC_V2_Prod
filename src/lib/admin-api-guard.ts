@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/auth";
 import { logPrivilegedMutation } from "@/lib/mutation-audit";
+import { checkAdminMutationRateLimit } from "@/lib/admin-rate-limit";
 import {
   type AdminAction,
   type AdminModule,
@@ -54,4 +55,36 @@ export async function requireAdminPermission(
     fullName: admin.fullName,
     access,
   };
+}
+
+/**
+ * Strict mutation guard for privileged admin APIs.
+ * Keeps existing auth behavior intact while adding centralized abuse limits.
+ */
+export async function requireAdminMutationPermission(
+  req: NextRequest,
+  module: AdminModule,
+  action: AdminAction,
+  opts?: { rateAction?: string; limit?: number; windowMs?: number },
+): Promise<{ id: string; email: string; fullName: string; access: EffectiveAdminAccess } | NextResponse> {
+  const admin = await requireAdminPermission(module, action);
+  if (admin instanceof NextResponse) return admin;
+
+  const gate = checkAdminMutationRateLimit({
+    req,
+    adminId: admin.id,
+    action: opts?.rateAction ?? `${module}:${action}`,
+    limit: opts?.limit,
+    windowMs: opts?.windowMs,
+  });
+  if (!gate.ok) {
+    return NextResponse.json(
+      { error: "Too many privileged requests. Retry shortly." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(gate.retryAfterSec) },
+      },
+    );
+  }
+  return admin;
 }

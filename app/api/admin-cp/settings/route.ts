@@ -1,7 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
-import { requireAdminPermission } from "@/lib/admin-api-guard";
+import { requireAdminMutationPermission, requireAdminPermission } from "@/lib/admin-api-guard";
+import { z } from "zod";
+
+const settingsPatchSchema = z
+  .object({
+    siteName: z.string().min(1).max(120).optional(),
+    announcementBanner: z.string().max(400).optional(),
+    announcementActive: z.boolean().optional(),
+    maintenanceMode: z.boolean().optional(),
+    registrationOpen: z.boolean().optional(),
+    landingHeroTitle: z.string().max(180).optional(),
+    landingHeroSubtitle: z.string().max(600).optional(),
+    featureFlags: z.record(z.unknown()).optional(),
+    rateLimitPolicy: z.record(z.unknown()).optional(),
+    legalPrivacyHtml: z.string().max(60_000).optional(),
+    legalTermsHtml: z.string().max(60_000).optional(),
+    landingCmsExtra: z.record(z.unknown()).optional(),
+  })
+  .strict();
 
 export async function GET() {
   const admin = await requireAdminPermission("settings", "read");
@@ -24,7 +42,11 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
-  const body = await req.json();
+  const parsed = settingsPatchSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid settings payload" }, { status: 400 });
+  }
+  const body = parsed.data;
   const data: Record<string, unknown> = {};
 
   const extendedOnlyKeys = [
@@ -55,14 +77,22 @@ export async function PATCH(req: NextRequest) {
   let actorEmail = "";
 
   if (touchesCore) {
-    const g = await requireAdminPermission("settings", "update");
+    const g = await requireAdminMutationPermission(req, "settings", "update", {
+      rateAction: "settings:update:core",
+      limit: 20,
+      windowMs: 60_000,
+    });
     if (g instanceof NextResponse) return g;
     actorId = g.id;
     actorEmail = g.email;
   }
 
   if (touchesExtended) {
-    const g = await requireAdminPermission("feature_flags", "update");
+    const g = await requireAdminMutationPermission(req, "settings", "update", {
+      rateAction: "settings:update:extended",
+      limit: 10,
+      windowMs: 60_000,
+    });
     if (g instanceof NextResponse) return g;
     if (!actorId) {
       actorId = g.id;

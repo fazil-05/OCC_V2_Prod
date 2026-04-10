@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdminPermission } from "@/lib/admin-api-guard";
+import { requireAdminMutationPermission } from "@/lib/admin-api-guard";
 import { logAudit } from "@/lib/audit";
+import { broadcastEClubs, invalidateGigsListCache } from "@/lib/gigs-realtime";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -14,10 +15,16 @@ const createSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const admin = await requireAdminPermission("gigs", "create");
+  const admin = await requireAdminMutationPermission(req, "gigs", "create", {
+    rateAction: "gigs:create",
+    limit: 25,
+    windowMs: 60_000,
+  });
   if (admin instanceof NextResponse) return admin;
 
-  const body = createSchema.parse(await req.json());
+  const parsed = createSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) return NextResponse.json({ error: "Invalid gig payload" }, { status: 400 });
+  const body = parsed.data;
 
   const gig = await prisma.gig.create({
     data: {
@@ -36,6 +43,9 @@ export async function POST(req: NextRequest) {
     action: "CREATE_GIG", entity: "gig", entityId: gig.id,
     details: { title: body.title, club: body.clubId },
   });
+
+  invalidateGigsListCache();
+  await broadcastEClubs({ type: "gig-created", gigId: gig.id });
 
   return NextResponse.json({ success: true, gig });
 }

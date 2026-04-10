@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdminPermission } from "@/lib/admin-api-guard";
+import { requireAdminMutationPermission } from "@/lib/admin-api-guard";
 import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 
@@ -13,10 +13,16 @@ const patchSchema = z.object({
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const admin = await requireAdminPermission("announcement_schedule", "update");
+  const admin = await requireAdminMutationPermission(req, "announcement_schedule", "update", {
+    rateAction: "announcement_schedule:update",
+    limit: 20,
+    windowMs: 60_000,
+  });
   if (admin instanceof NextResponse) return admin;
 
-  const body = patchSchema.parse(await req.json());
+  const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) return NextResponse.json({ error: "Invalid schedule payload" }, { status: 400 });
+  const body = parsed.data;
   const data: Record<string, unknown> = {};
   if (body.title !== undefined) data.title = body.title;
   if (body.body !== undefined) data.body = body.body;
@@ -45,8 +51,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   return NextResponse.json({ success: true, item: row });
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const admin = await requireAdminPermission("announcement_schedule", "delete");
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  const admin = await requireAdminMutationPermission(req, "announcement_schedule", "delete", {
+    rateAction: "announcement_schedule:delete",
+    limit: 12,
+    windowMs: 60_000,
+  });
   if (admin instanceof NextResponse) return admin;
 
   await prisma.adminScheduledAnnouncement.delete({ where: { id: params.id } });

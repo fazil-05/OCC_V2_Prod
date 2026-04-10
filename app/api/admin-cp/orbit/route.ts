@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdminPermission } from "@/lib/admin-api-guard";
+import { requireAdminMutationPermission, requireAdminPermission } from "@/lib/admin-api-guard";
 import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 
@@ -31,10 +31,16 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const admin = await requireAdminPermission("orbit", "create");
+  const admin = await requireAdminMutationPermission(req, "orbit", "create", {
+    rateAction: "orbit:create",
+    limit: 20,
+    windowMs: 60_000,
+  });
   if (admin instanceof NextResponse) return admin;
 
-  const body = createSchema.parse(await req.json());
+  const parsed = createSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) return NextResponse.json({ error: "Invalid orbit payload" }, { status: 400 });
+  const body = parsed.data;
 
   const project = await prisma.orbitProject.create({
     data: {

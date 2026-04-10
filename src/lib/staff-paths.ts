@@ -4,7 +4,9 @@ export const STAFF_PUBLIC_PREFIX = (
 ).replace(/\/$/, "");
 
 /** Public URL prefix for the SaaS admin control panel */
-export const ADMIN_CP_PREFIX = "/k9xm2p7qv4nw8-admin-control-panel";
+export const ADMIN_CP_PREFIX = (
+  process.env.NEXT_PUBLIC_OCC_ADMIN_CP_PREFIX || "/k9xm2p7qv4nw8-admin-control-panel"
+).replace(/\/$/, "");
 
 /** Staff-only sign-in page (under the same prefix): .../gate */
 export function staffGateHref(): string {

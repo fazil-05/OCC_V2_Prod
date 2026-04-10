@@ -54,9 +54,12 @@ function JoinFitness() {
         </p>
 
         <div className="mt-20">
-           <button className="px-14 py-5 bg-[#CCFF00] text-black font-black uppercase tracking-widest text-[12px] rounded-full hover:scale-105 transition-transform">
-             Book Session
-           </button>
+          <Link
+            to="/login"
+            className="inline-block px-14 py-5 bg-[#CCFF00] text-black font-black uppercase tracking-widest text-[12px] rounded-full hover:scale-105 transition-transform"
+          >
+            Book Session
+          </Link>
         </div>
       </motion.div>
     </section>
@@ -72,11 +75,6 @@ export function FitnessPage({ hideLoader = false }: FitnessPageProps) {
       
       <header className="fixed top-0 inset-x-0 z-[50] flex items-center justify-between px-8 py-8 mix-blend-difference pointer-events-none">
         <Link to="/" className="pointer-events-auto text-[10px] font-bold uppercase tracking-[0.4em]">← Club Hub</Link>
-        <div className="flex items-center gap-12 pointer-events-auto hidden md:flex">
-           <a href="#" className="text-[10px] uppercase tracking-widest hover:text-[#CCFF00]">Training</a>
-           <a href="#" className="text-[10px] uppercase tracking-widest hover:text-[#CCFF00]">Gears</a>
-           <a href="#" className="text-[10px] uppercase tracking-widest hover:text-[#CCFF00]">Events</a>
-        </div>
         <span className="font-black text-xl italic uppercase tracking-tighter">OCC.</span>
       </header>
 

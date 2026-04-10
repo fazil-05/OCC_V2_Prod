@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdminPermission } from "@/lib/admin-api-guard";
+import { requireAdminMutationPermission, requireAdminPermission } from "@/lib/admin-api-guard";
 import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 
@@ -39,10 +39,18 @@ const postSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const admin = await requireAdminPermission("broadcasts", "create");
+  const admin = await requireAdminMutationPermission(req, "broadcasts", "create", {
+    rateAction: "broadcasts:create",
+    limit: 8,
+    windowMs: 60_000,
+  });
   if (admin instanceof NextResponse) return admin;
 
-  const body = postSchema.parse(await req.json());
+  const parsed = postSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid broadcast payload" }, { status: 400 });
+  }
+  const body = parsed.data;
 
   let userIds: string[] = [];
 

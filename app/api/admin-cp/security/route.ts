@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdminPermission } from "@/lib/admin-api-guard";
+import { requireAdminMutationPermission, requireAdminPermission } from "@/lib/admin-api-guard";
 import { logAudit } from "@/lib/audit";
+import { z } from "zod";
+
+const securityResolveSchema = z.object({ id: z.string().min(1).max(191) }).strict();
 
 export async function GET(req: Request) {
   const admin = await requireAdminPermission("security", "read");
@@ -36,11 +39,16 @@ export async function GET(req: Request) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const admin = await requireAdminPermission("security", "resolve");
+  const admin = await requireAdminMutationPermission(req, "security", "resolve", {
+    rateAction: "security:resolve",
+    limit: 20,
+    windowMs: 60_000,
+  });
   if (admin instanceof NextResponse) return admin;
 
-  const { id } = await req.json();
-  if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
+  const parsed = securityResolveSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  const { id } = parsed.data;
 
   await prisma.suspiciousAccess.update({ where: { id }, data: { resolved: true } });
 

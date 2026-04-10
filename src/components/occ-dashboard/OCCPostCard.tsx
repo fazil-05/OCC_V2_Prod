@@ -84,6 +84,15 @@ type PostComment = {
   };
 };
 
+const REPORT_REASON_OPTIONS = [
+  "Harassment or bullying",
+  "Hate speech",
+  "Spam or scam",
+  "Profanity or abuse",
+  "False information",
+  "Other",
+] as const;
+
 /** Instagram-style: always clamp to 5 lines until expanded (works at any viewport width). */
 function PostCaptionBody({ text }: { text: string }) {
   const [expanded, setExpanded] = useState(false);
@@ -160,6 +169,9 @@ export function OCCPostCard({
   const engagementSeq = useRef(0);
   /** One in-flight like request — Instagram-style single tap, no double-count races. */
   const likeInFlight = useRef(false);
+  const likeBurstTimerRef = useRef<number | null>(null);
+  const [showLikeBurst, setShowLikeBurst] = useState(false);
+  const [likeBurstKey, setLikeBurstKey] = useState(0);
 
   const premiumFallback = useMemo(
     () => premiumClubImageForName(post.clubName || ""),
@@ -172,6 +184,11 @@ export function OCCPostCard({
   const [commentsCount, setCommentsCount] = useState(post.commentsCount ?? 0);
   const [commentText, setCommentText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reportCommentId, setReportCommentId] = useState<string | null>(null);
+  const [reportReason, setReportReason] = useState<string>("");
+  const [reportDetails, setReportDetails] = useState("");
+  const [isReporting, setIsReporting] = useState(false);
+  const [reportMessage, setReportMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
   const allTagText = `${post.caption || ""} ${post.content || ""}`;
   const parsedHashtags = useMemo(() => extractHashtags(allTagText), [allTagText]);
   const cleanBody = useMemo(() => stripHashtags(post.content || ""), [post.content]);
@@ -192,6 +209,10 @@ export function OCCPostCard({
     setCommentsCount(post.commentsCount ?? 0);
     setComments([]);
     setIsCommentsOpen(false);
+    setReportCommentId(null);
+    setReportReason("");
+    setReportDetails("");
+    setReportMessage(null);
   }, [post.id, post.commentsCount]);
 
   useEffect(() => {
@@ -322,14 +343,26 @@ export function OCCPostCard({
   const openLightbox = () => setIsLightboxOpen(true);
   const closeLightbox = () => setIsLightboxOpen(false);
 
+  const triggerLikeBurst = () => {
+    setLikeBurstKey((k) => k + 1);
+    setShowLikeBurst(true);
+    if (likeBurstTimerRef.current) window.clearTimeout(likeBurstTimerRef.current);
+    likeBurstTimerRef.current = window.setTimeout(() => {
+      setShowLikeBurst(false);
+      likeBurstTimerRef.current = null;
+    }, 1000);
+  };
+
   const toggleLike = async () => {
     if (!currentUserId || likeInFlight.current) return;
     likeInFlight.current = true;
     engagementSeq.current += 1;
     const prevLiked = liked;
     const prevCount = likeCount;
+    const willLike = !liked;
     setLiked(!liked);
     setLikeCount(liked ? likeCount - 1 : likeCount + 1);
+    if (willLike) triggerLikeBurst();
 
     try {
       const res = await fetch(`/api/posts/${post.id}/like`, {
@@ -347,6 +380,15 @@ export function OCCPostCard({
       likeInFlight.current = false;
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (likeBurstTimerRef.current) {
+        window.clearTimeout(likeBurstTimerRef.current);
+        likeBurstTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const toggleBookmark = async () => {
     if (!currentUserId) return;
@@ -438,18 +480,48 @@ export function OCCPostCard({
     } catch (e) {}
   };
 
-  const handleReportComment = async (commentId: string) => {
-    const reason = prompt("Enter the reason for flag (Harassment, Profanity, Spam):");
-    if (!reason) return;
+  const openReportModal = (commentId: string) => {
+    setReportCommentId(commentId);
+    setReportReason("");
+    setReportDetails("");
+    setReportMessage(null);
+  };
+
+  const closeReportModal = () => {
+    if (isReporting) return;
+    setReportCommentId(null);
+    setReportReason("");
+    setReportDetails("");
+  };
+
+  const handleReportComment = async () => {
+    if (!reportCommentId || !reportReason || isReporting) return;
+    const finalReason =
+      reportReason === "Other" && reportDetails.trim()
+        ? `Other: ${reportDetails.trim().slice(0, 220)}`
+        : reportReason;
+    setIsReporting(true);
     try {
-      await fetch(`/api/comments/${commentId}/report`, {
+      const res = await fetch(`/api/comments/${reportCommentId}`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason }),
+        body: JSON.stringify({ reason: finalReason }),
       });
-      alert("Comment flagged. Our Elite Safety team will review the intel shortly.");
-    } catch (e) {}
+      if (!res.ok) {
+        setReportMessage({ kind: "error", text: "Could not submit report. Please try again." });
+        return;
+      }
+      setReportMessage({ kind: "success", text: "Report submitted. Our safety team will review it shortly." });
+      window.setTimeout(() => {
+        setReportCommentId(null);
+        setReportMessage(null);
+      }, 900);
+    } catch (e) {
+      setReportMessage({ kind: "error", text: "Network error. Please retry." });
+    } finally {
+      setIsReporting(false);
+    }
   };
 
   return (
@@ -556,11 +628,12 @@ export function OCCPostCard({
           ) : null}
 
           <AnimatePresence>
-            {liked && (
+            {showLikeBurst && (
               <motion.div 
+                key={`like-burst-${likeBurstKey}`}
                 initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1.1, opacity: 1 }}
-                exit={{ scale: 0, opacity: 0 }}
+                animate={{ scale: [0.2, 1.15, 1], opacity: [0, 1, 0] }}
+                transition={{ duration: 1, ease: "easeOut" }}
                 className="absolute inset-0 flex items-center justify-center pointer-events-none z-30"
               >
                 <Heart className="h-16 w-16 text-white/50 fill-white/50 drop-shadow-2xl" />
@@ -655,7 +728,7 @@ export function OCCPostCard({
                                       <Trash2 className="h-3 w-3" />
                                     </button>
                                   ) : null}
-                                  <button onClick={() => handleReportComment(comment.id)} className="p-1 px-1.5 rounded-lg text-black/20 hover:text-black hover:bg-black/5 transition-colors">
+                                  <button onClick={() => openReportModal(comment.id)} className="p-1 px-1.5 rounded-lg text-black/20 hover:text-black hover:bg-black/5 transition-colors">
                                     <Flag className="h-3 w-3" />
                                   </button>
                                 </div>
@@ -830,6 +903,99 @@ export function OCCPostCard({
                 ))}
               </div>
             ) : null}
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {reportCommentId ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[230] flex items-center justify-center bg-black/55 p-4"
+            onClick={closeReportModal}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.98 }}
+              transition={{ duration: 0.18 }}
+              className="w-full max-w-md rounded-2xl border border-black/10 bg-white p-5 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-black">Report comment</h4>
+                <button
+                  type="button"
+                  onClick={closeReportModal}
+                  className="rounded-md px-2 py-1 text-xs text-black/50 hover:bg-black/5"
+                >
+                  Close
+                </button>
+              </div>
+
+              <p className="mb-3 text-xs text-black/55">
+                Select a reason. Your report is private and reviewed by the moderation team.
+              </p>
+
+              <div className="grid grid-cols-2 gap-2">
+                {REPORT_REASON_OPTIONS.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setReportReason(option)}
+                    className={`rounded-xl border px-3 py-2 text-left text-xs font-medium transition ${
+                      reportReason === option
+                        ? "border-[#5227FF] bg-[#5227FF]/8 text-[#5227FF]"
+                        : "border-black/10 bg-white text-black/70 hover:bg-black/[0.03]"
+                    }`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+
+              {reportReason === "Other" ? (
+                <textarea
+                  value={reportDetails}
+                  onChange={(e) => setReportDetails(e.target.value)}
+                  placeholder="Add a short note (optional)"
+                  maxLength={220}
+                  className="mt-3 h-24 w-full resize-none rounded-xl border border-black/10 px-3 py-2 text-xs text-black outline-none focus:border-[#5227FF]/40"
+                />
+              ) : null}
+
+              {reportMessage ? (
+                <div
+                  className={`mt-3 rounded-lg px-3 py-2 text-xs ${
+                    reportMessage.kind === "success"
+                      ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : "border border-rose-200 bg-rose-50 text-rose-700"
+                  }`}
+                >
+                  {reportMessage.text}
+                </div>
+              ) : null}
+
+              <div className="mt-4 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={closeReportModal}
+                  className="rounded-lg border border-black/10 px-3 py-2 text-xs font-medium text-black/60 hover:bg-black/[0.03]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleReportComment}
+                  disabled={!reportReason || isReporting}
+                  className="rounded-lg bg-[#5227FF] px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isReporting ? "Submitting..." : "Submit report"}
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         ) : null}
       </AnimatePresence>

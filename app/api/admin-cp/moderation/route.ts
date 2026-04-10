@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdminPermission } from "@/lib/admin-api-guard";
+import { requireAdminMutationPermission, requireAdminPermission } from "@/lib/admin-api-guard";
 import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 
@@ -86,10 +86,16 @@ const postTicketSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const admin = await requireAdminPermission("moderation", "update");
+  const admin = await requireAdminMutationPermission(req, "moderation", "update", {
+    rateAction: "moderation:create_ticket",
+    limit: 30,
+    windowMs: 60_000,
+  });
   if (admin instanceof NextResponse) return admin;
 
-  const body = postTicketSchema.parse(await req.json());
+  const parsed = postTicketSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) return NextResponse.json({ error: "Invalid moderation payload" }, { status: 400 });
+  const body = parsed.data;
 
   const ticket = await prisma.moderationTicket.upsert({
     where: {
@@ -128,10 +134,16 @@ const patchTicketSchema = z.object({
 });
 
 export async function PATCH(req: NextRequest) {
-  const admin = await requireAdminPermission("moderation", "update");
+  const admin = await requireAdminMutationPermission(req, "moderation", "update", {
+    rateAction: "moderation:update_ticket",
+    limit: 30,
+    windowMs: 60_000,
+  });
   if (admin instanceof NextResponse) return admin;
 
-  const body = patchTicketSchema.parse(await req.json());
+  const parsed = patchTicketSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) return NextResponse.json({ error: "Invalid moderation payload" }, { status: 400 });
+  const body = parsed.data;
   const data: Record<string, unknown> = {};
   if (body.status !== undefined) data.status = body.status;
   if (body.assigneeId !== undefined) data.assigneeId = body.assigneeId;
