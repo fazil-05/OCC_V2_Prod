@@ -441,6 +441,26 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+model ActivityEvent {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  actorName   String
+  actorRole   String?
+  eventType   String
+  category    String
+  entityType  String?
+  entityId    String?
+  summary     String
+  metadata    Json?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([category, createdAt])
+  @@index([actorUserId, createdAt])
+  @@map("activity_events")
+}
+
 model OrbitProject {
   id          String   @id @default(cuid())
   title       String
