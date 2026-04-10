@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher";
 import { notifyPostCommented } from "@/lib/post-engagement-notify";
+import { ACTIVITY_CATEGORIES, logActivityEvent } from "@/lib/activity-events";
 
 /** Public comment payload — never include email, phone, or other PII (same for all roles). */
 function publicCommentPayload(c: {
@@ -73,11 +74,18 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     where: { id: params.id },
     include: { club: { select: { id: true, headerId: true } } },
   });
-  const commentsCount = await prisma.comment.count({
-    where: { postId: params.id },
-  });
 
   const safeComment = publicCommentPayload(comment);
+  await logActivityEvent({
+    actor: { userId: user.id, name: user.fullName, role: user.role },
+    category: ACTIVITY_CATEGORIES.social,
+    eventType: "post_comment_added",
+    summary: `${user.fullName} commented on a post`,
+    entityType: "post",
+    entityId: params.id,
+    metadata: { commentId: comment.id, clubId: post?.clubId ?? null },
+    broadcast: true,
+  });
 
   const preview =
     content.length > 80 ? `${content.slice(0, 77)}…` : content;
@@ -85,7 +93,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   try {
     await pusherServer.trigger(`club-${post?.clubId}`, "new-comment", {
       postId: params.id,
-      commentsCount,
       comment: safeComment,
     });
   } catch (e) {
@@ -105,5 +112,5 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     });
   }
 
-  return NextResponse.json({ success: true, comment: safeComment, commentsCount }, { status: 201 });
+  return NextResponse.json({ success: true, comment: safeComment }, { status: 201 });
 }

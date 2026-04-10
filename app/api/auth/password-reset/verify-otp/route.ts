@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { sha256Hex } from "@/lib/otp";
+import { ACTIVITY_CATEGORIES, extractRequestIp, logActivityEvent } from "@/lib/activity-events";
 
 const verifyOtpSchema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -26,6 +27,14 @@ export async function POST(req: NextRequest) {
     });
 
     if (!latestOtpToken || latestOtpToken.attemptsLeft <= 0) {
+      await logActivityEvent({
+        actor: { userId: null, name: email, role: null },
+        category: ACTIVITY_CATEGORIES.auth,
+        eventType: "password_reset_otp_verify_failed",
+        summary: `OTP verification failed for ${email}`,
+        entityType: "user",
+        ipAddress: extractRequestIp(req),
+      });
       return NextResponse.json({ error: "Invalid or expired OTP" }, { status: 400 });
     }
 
@@ -39,11 +48,31 @@ export async function POST(req: NextRequest) {
           usedAt: nextAttempts === 0 ? new Date() : null,
         },
       });
+      await logActivityEvent({
+        actor: { userId: null, name: email, role: null },
+        category: ACTIVITY_CATEGORIES.auth,
+        eventType: "password_reset_otp_verify_failed",
+        summary: `OTP verification failed for ${email}`,
+        entityType: "user",
+        ipAddress: extractRequestIp(req),
+      });
       return NextResponse.json({ error: "Invalid or expired OTP" }, { status: 400 });
     }
 
+    await logActivityEvent({
+      actor: { userId: null, name: email, role: null },
+      category: ACTIVITY_CATEGORIES.auth,
+      eventType: "password_reset_otp_verified",
+      summary: `OTP verified for ${email}`,
+      entityType: "user",
+      ipAddress: extractRequestIp(req),
+      broadcast: true,
+    });
     return NextResponse.json({ success: true }, { status: 200 });
-  } catch {
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.issues[0]?.message || "Invalid request" }, { status: 400 });
+    }
     return NextResponse.json({ error: "OTP verification failed" }, { status: 500 });
   }
 }

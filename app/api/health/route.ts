@@ -5,10 +5,6 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function GET() {
-  // Avoid becoming a public recon endpoint in production.
-  if (process.env.NODE_ENV === "production") {
-    return NextResponse.json({ status: "ok" });
-  }
   const start = Date.now();
 
   let dbOk = false;
@@ -17,11 +13,12 @@ export async function GET() {
     dbOk = true;
   } catch {}
 
-  return NextResponse.json({
-    status: "ok",
+  const payload = {
+    status: dbOk ? "ok" : "degraded",
     uptime: process.uptime(),
     db: dbOk ? "connected" : "unreachable",
     latencyMs: Date.now() - start,
     timestamp: new Date().toISOString(),
-  });
+  };
+  return NextResponse.json(payload, { status: dbOk ? 200 : 503 });
 }

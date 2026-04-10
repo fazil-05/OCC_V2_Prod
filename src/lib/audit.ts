@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export type AuditAction =
@@ -77,7 +78,9 @@ export async function logAudit(params: {
         action: params.action,
         entity: params.entity,
         entityId: params.entityId ?? null,
-        details: params.details ? (sanitizeAuditDetails(params.details) as Record<string, unknown>) : null,
+        details: params.details
+          ? (sanitizeAuditDetails(params.details) as Prisma.InputJsonValue)
+          : undefined,
         ipAddress: params.ipAddress ?? null,
       },
     });

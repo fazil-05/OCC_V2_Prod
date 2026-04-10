@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { Check, ChevronDown, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { pusherClient } from "@/lib/pusher";
+import { ECLUBS_PUSHER_CHANNEL, ECLUBS_PUSHER_EVENT } from "@/lib/gigs-realtime";
 import { toast } from "sonner";
 
 type AppRow = {
@@ -75,15 +76,15 @@ export function ClubHeaderGigsClient({ initialGigs }: { initialGigs: HeaderGigRo
 
   useEffect(() => {
     if (!pusherClient) return;
-    const channel = pusherClient.subscribe("e-clubs");
-    channel.bind("e-clubs-event", (data: any) => {
+    const channel = pusherClient.subscribe(ECLUBS_PUSHER_CHANNEL);
+    channel.bind(ECLUBS_PUSHER_EVENT, (data: any) => {
       if (data.type === "gig-application") {
         router.refresh();
       }
     });
     return () => {
-      channel.unbind("e-clubs-event");
-      pusherClient?.unsubscribe("e-clubs");
+      channel.unbind(ECLUBS_PUSHER_EVENT);
+      pusherClient?.unsubscribe(ECLUBS_PUSHER_CHANNEL);
     };
   }, [router]);
 

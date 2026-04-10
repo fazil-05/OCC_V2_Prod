@@ -114,18 +114,12 @@ export async function deleteCloudinaryByUrl(url: string | null | undefined): Pro
   const publicId = publicIdFromCloudinaryUrl(url);
   if (!publicId) return;
   configure();
-  // SDK returns a rejecting Promise on error even when using a callback — that unhandled
-  // rejection surfaced as 500 on DELETE /api/posts/[id]. disable_promises uses callback only.
-  await new Promise<void>((resolve) => {
-    cloudinary.uploader.destroy(
-      publicId,
-      (result) => {
-        if (result?.error) {
-          console.warn("[cloudinary] destroy failed:", result.error);
-        }
-        resolve();
-      },
-      { disable_promises: true },
-    );
-  });
+  try {
+    const result = (await cloudinary.uploader.destroy(publicId)) as { error?: unknown };
+    if (result?.error) {
+      console.warn("[cloudinary] destroy failed:", result.error);
+    }
+  } catch (e) {
+    console.warn("[cloudinary] destroy failed:", e);
+  }
 }

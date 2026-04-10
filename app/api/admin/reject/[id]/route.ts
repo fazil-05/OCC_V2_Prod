@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher";
 import { checkAdminMutationRateLimit } from "@/lib/admin-rate-limit";
 import { logAudit } from "@/lib/audit";
+import { ACTIVITY_CATEGORIES, extractRequestIp, logActivityEvent } from "@/lib/activity-events";
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const admin = await requireAdminPermission("approvals", "reject");
@@ -66,6 +67,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     entityId: target.id,
     details: { reason },
     ipAddress: ip,
+  });
+  await logActivityEvent({
+    actor: { userId: admin.id, name: admin.fullName, role: "ADMIN" },
+    category: ACTIVITY_CATEGORIES.admin,
+    eventType: "club_header_rejected",
+    summary: `${admin.fullName} rejected a club header application`,
+    entityType: "user",
+    entityId: target.id,
+    metadata: { reason },
+    ipAddress: extractRequestIp(req),
+    broadcast: true,
   });
   return NextResponse.json({ success: true });
 }

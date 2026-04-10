@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { checkAdminMutationRateLimit } from "@/lib/admin-rate-limit";
 import { logAudit } from "@/lib/audit";
+import { ACTIVITY_CATEGORIES, extractRequestIp, logActivityEvent } from "@/lib/activity-events";
 
 const patchSchema = z.object({
   suspended: z.boolean(),
@@ -41,6 +42,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     entityId: params.id,
     details: { suspended },
     ipAddress: ip,
+  });
+  await logActivityEvent({
+    actor: { userId: admin.id, name: admin.fullName, role: "ADMIN" },
+    category: ACTIVITY_CATEGORIES.admin,
+    eventType: suspended ? "user_suspended" : "user_unsuspended",
+    summary: `${admin.fullName} ${suspended ? "suspended" : "unsuspended"} a user`,
+    entityType: "user",
+    entityId: params.id,
+    metadata: { suspended },
+    ipAddress: extractRequestIp(req),
+    broadcast: true,
   });
 
   return NextResponse.json({ success: true });

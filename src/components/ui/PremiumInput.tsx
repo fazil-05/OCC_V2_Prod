@@ -43,10 +43,10 @@ export const PremiumInput = React.forwardRef<HTMLInputElement, PremiumInputProps
 
     return (
       <div className={cn("space-y-2", wrapperClassName)}>
-        <div className="relative">
+        <div>
           <label
             className={cn(
-              "absolute left-0 top-0 text-[10px] uppercase tracking-[0.4em] transition-colors",
+              "text-[10px] uppercase tracking-[0.4em] font-bold transition-colors",
               focused ? "text-[#5227FF]" : "text-slate-400",
             )}
           >
@@ -55,7 +55,7 @@ export const PremiumInput = React.forwardRef<HTMLInputElement, PremiumInputProps
 
           <div
             className={cn(
-              "relative mt-5 flex h-14 items-center rounded-2xl border bg-white/50 transition-all shadow-sm",
+              "relative mt-2 flex h-14 items-center rounded-2xl border bg-white/50 transition-all shadow-sm",
               prefix ? "pl-16" : "pl-12",
               rightSlot || isValid ? "pr-12" : "pr-4",
               error

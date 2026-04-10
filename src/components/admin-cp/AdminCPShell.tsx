@@ -33,6 +33,7 @@ const nav: NavItem[] = [
   { path: "/approvals", label: "Approvals", icon: CheckCircle2, badgeKey: "pending", module: "approvals" },
   { path: "/moderation", label: "Moderation", icon: Flag, module: "moderation" },
   { path: "/analytics", label: "Analytics", icon: TrendingUp, module: "analytics" },
+  { path: "/activity", label: "Activity", icon: Activity, module: "audit" },
   { path: "/audit", label: "Audit Log", icon: ScrollText, module: "audit" },
   { path: "/security", label: "Security", icon: ShieldAlert, badgeKey: "alerts", module: "security" },
   { path: "/roles", label: "Roles", icon: Shield, module: "roles" },

@@ -27,8 +27,9 @@ const SEQUENCES: FrameSequence[] = [
   { path: "/music-frames/", count: 441 },   // Fixed: Music has 441 frames
 ];
 
-const CONCURRENCY = 8;
+const CONCURRENCY = 4;
 const IDLE_DELAY_MS = 3000;
+const INITIAL_FRAMES_PER_SEQUENCE = 120;
 
 let started = false;
 
@@ -48,7 +49,8 @@ function buildUrls(): string[] {
   const urls: string[] = [];
   for (const seq of SEQUENCES) {
     const base = framesPublicPath(seq.path);
-    for (let i = 1; i <= seq.count; i++) {
+    const maxFrames = Math.min(seq.count, INITIAL_FRAMES_PER_SEQUENCE);
+    for (let i = 1; i <= maxFrames; i++) {
       const padded = String(i).padStart(4, "0");
       urls.push(`${base}${padded}.jpg`);
     }

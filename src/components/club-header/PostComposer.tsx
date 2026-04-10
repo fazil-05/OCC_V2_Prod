@@ -135,6 +135,9 @@ export function PostComposer({ clubId }: { clubId: string }) {
       setHashtags("");
       removeImage();
       toast.success("Posted successfully! 🎉");
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("header-post-created"));
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to post");
     } finally {

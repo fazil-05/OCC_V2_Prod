@@ -31,9 +31,10 @@ export function NotificationsFeed({
   }, []);
 
   useEffect(() => {
-    if (!pusherClient || !userId) return;
+    const client = pusherClient;
+    if (!client || !userId) return;
     const ch = `user-${userId}`;
-    const channel = pusherClient.subscribe(ch);
+    const channel = client.subscribe(ch);
 
     const onGeneric = (data: { title?: string; message?: string }) => {
       merge({
@@ -58,7 +59,7 @@ export function NotificationsFeed({
       channel.unbind("notification", onGeneric);
       channel.unbind("approved");
       channel.unbind("rejected");
-      pusherClient.unsubscribe(ch);
+      client.unsubscribe(ch);
     };
   }, [userId, merge]);
 

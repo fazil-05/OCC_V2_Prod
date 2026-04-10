@@ -41,6 +41,14 @@ export function HeaderPostsManager() {
     void load();
   }, []);
 
+  useEffect(() => {
+    const onCreated = () => {
+      void load();
+    };
+    window.addEventListener("header-post-created", onCreated);
+    return () => window.removeEventListener("header-post-created", onCreated);
+  }, []);
+
   const openEdit = (p: Row) => {
     setEditingId(p.id);
     setCaption(p.caption || "");

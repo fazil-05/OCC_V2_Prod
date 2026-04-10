@@ -49,10 +49,10 @@ export function useOptimisticComment({
       setPending(true);
 
       try {
-        const res = await fetch(`/api/comments`, {
+        const res = await fetch(`/api/posts/${postId}/comment`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ postId, content: content.trim() }),
+          body: JSON.stringify({ content: content.trim() }),
         });
         if (!res.ok) throw new Error();
         const data = await res.json();

@@ -21,7 +21,12 @@ export function ApplyGigButton({
       onClick={async () => {
         if (applied || loading) return;
         setLoading(true);
-        router.push(`/gigs/${gigId}/apply`);
+        try {
+          router.push(`/gigs/${gigId}/apply`);
+          window.setTimeout(() => setLoading(false), 2500);
+        } catch {
+          setLoading(false);
+        }
       }}
     >
       {applied ? "Applied ✓" : loading ? "Opening..." : "Apply Now"}

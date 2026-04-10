@@ -5,6 +5,7 @@ import { postUpdateSchema } from "@/lib/validations";
 import { removeStoredPostImage } from "@/lib/postImageCleanup";
 import { pusherServer } from "@/lib/pusher";
 import { serverCache } from "@/lib/server-cache";
+import { ACTIVITY_CATEGORIES, logActivityEvent } from "@/lib/activity-events";
 
 async function canEditPost(
   user: NonNullable<Awaited<ReturnType<typeof getSessionUser>>>,
@@ -106,6 +107,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     console.warn("[posts PATCH] pusher:", e);
   }
   serverCache.invalidatePrefix("clubs:");
+  await logActivityEvent({
+    actor: { userId: user.id, name: user.fullName, role: user.role },
+    category: ACTIVITY_CATEGORIES.content,
+    eventType: "post_updated",
+    summary: `${user.fullName} updated a post`,
+    entityType: "post",
+    entityId: params.id,
+    metadata: { clubId: post.clubId },
+    broadcast: true,
+  });
 
   return NextResponse.json({ success: true, post: updated });
 }
@@ -134,6 +145,16 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     console.warn("[posts DELETE] pusher:", e);
   }
   serverCache.invalidatePrefix("clubs:");
+  await logActivityEvent({
+    actor: { userId: user.id, name: user.fullName, role: user.role },
+    category: ACTIVITY_CATEGORIES.content,
+    eventType: "post_deleted",
+    summary: `${user.fullName} deleted a post`,
+    entityType: "post",
+    entityId: params.id,
+    metadata: { clubId: post.clubId },
+    broadcast: true,
+  });
 
   return NextResponse.json({ success: true });
 }

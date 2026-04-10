@@ -3,8 +3,6 @@
 import React, { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
-import Link from "next/link";
-import { Loader2, Mail, CheckCircle2, ShieldCheck, Sparkles } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/app/components/ui/input-otp";
 import { Interactive3DModel } from "@/app/components/auth/Interactive3DModel";
 import { REFERRAL_CODE_MIN_LEN } from "@/lib/validations";
@@ -232,13 +230,13 @@ function RegisterPageInner() {
         className="w-full lg:w-1/2 flex flex-col justify-center px-8 md:px-16 lg:px-24 bg-white"
       >
         <div className="mb-6">
-          <Link
+          <a
             href="/"
             className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900"
           >
             <span aria-hidden>←</span>
             Back to landing
-          </Link>
+          </a>
         </div>
 
         {/* Logo */}
@@ -351,9 +349,25 @@ function RegisterPageInner() {
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 bg-gray-50 py-3 text-sm font-semibold text-gray-800 transition hover:bg-gray-100 disabled:opacity-50"
             >
               {sendingOtp ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <span
+                  className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-600 border-t-transparent"
+                  aria-hidden
+                />
               ) : (
-                <Mail className="h-4 w-4" />
+                <svg
+                  className="h-4 w-4 shrink-0"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <rect width="20" height="16" x="2" y="4" rx="2" />
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                </svg>
               )}
               Send verification code
             </button>
@@ -394,7 +408,20 @@ function RegisterPageInner() {
             <p className="mt-2 text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Ask your Club Leader for their code</p>
             {referralMeta?.valid ? (
               <div className="mt-3 flex items-start gap-2.5 rounded-2xl bg-emerald-50 p-4 border border-emerald-100">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+                <svg
+                  className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <path d="m9 12 2 2 4-4" />
+                </svg>
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-800">Verified: {referralMeta.club?.name}</p>
                   <p className="text-xs text-emerald-600/80 font-medium pt-0.5">Joining as a member under {referralMeta.headerName}</p>
@@ -505,7 +532,10 @@ function RegisterPageInner() {
           >
             {loading ? (
               <>
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <span
+                  className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"
+                  aria-hidden
+                />
                 Creating account...
               </>
             ) : (
@@ -516,9 +546,9 @@ function RegisterPageInner() {
           {/* Login Link */}
           <p className="text-center text-gray-600 text-sm">
             Already have an account?{" "}
-            <Link href="/login" className="text-blue-600 hover:text-blue-700 font-semibold">
+            <a href="/login" className="text-blue-600 hover:text-blue-700 font-semibold">
               Log in
-            </Link>
+            </a>
           </p>
         </motion.form>
       </motion.div>
@@ -569,7 +599,20 @@ function RegisterPageInner() {
           className="absolute top-12 right-12 flex items-center gap-4 bg-white/5 backdrop-blur-3xl px-6 py-4 rounded-[28px] border border-white/10"
         >
           <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-[#3B5BFF] to-[#5227FF] flex items-center justify-center shadow-lg shadow-[#3B5BFF]/20">
-            <ShieldCheck className="text-white h-5 w-5" />
+            <svg
+              className="text-white h-5 w-5"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+              <path d="m9 12 2 2 4-4" />
+            </svg>
           </div>
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white">OFF-CampusClub</p>

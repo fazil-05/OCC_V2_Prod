@@ -2,6 +2,7 @@
 
 const CACHE_NAME = "occ-frames-v1";
 const FRAME_EXTS = /\.(jpg|jpeg|webp|png)$/i;
+const MAX_FRAME_CACHE_ENTRIES = 500;
 
 /**
  * Matches requests that look like scroll-animation frames.
@@ -51,7 +52,13 @@ self.addEventListener("fetch", (event) => {
 
         return fetch(event.request).then((response) => {
           if (response.ok) {
-            cache.put(event.request, response.clone());
+            cache.put(event.request, response.clone()).then(() =>
+              cache.keys().then((keys) => {
+                if (keys.length <= MAX_FRAME_CACHE_ENTRIES) return;
+                const pruneCount = keys.length - MAX_FRAME_CACHE_ENTRIES;
+                return Promise.all(keys.slice(0, pruneCount).map((k) => cache.delete(k)));
+              }),
+            );
           }
           return response;
         });

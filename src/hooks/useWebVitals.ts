@@ -55,9 +55,8 @@ export function useWebVitals() {
     if (typeof window === "undefined") return;
 
     // web-vitals is a tiny library (~1.5kb) that Next.js already includes
-    import("web-vitals").then(({ onLCP, onFID, onCLS, onINP, onTTFB, onFCP }) => {
+    import("web-vitals").then(({ onLCP, onCLS, onINP, onTTFB, onFCP }) => {
       onLCP(logMetric as any);
-      onFID(logMetric as any);
       onCLS(logMetric as any);
       onINP(logMetric as any);
       onTTFB(logMetric as any);

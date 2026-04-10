@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -172,12 +171,12 @@ export default function GigApplyPage() {
           The club header is reviewing your application. After approval, you&apos;ll return here (or use E-Clubs) to
           submit your project deliverables.
         </p>
-        <Link
+        <a
           href="/gigs"
           className="inline-block rounded-xl border border-white/20 px-5 py-3 text-xs font-black uppercase tracking-[0.2em] text-white/80"
         >
           Back to gigs
-        </Link>
+        </a>
       </div>
     );
   }
@@ -190,12 +189,12 @@ export default function GigApplyPage() {
         <p className="text-sm text-[#F5F0E8]/70">
           Your deliverables are with the club header. You can update them from E-Clubs if you need to replace a file.
         </p>
-        <Link
+        <a
           href="/e-clubs"
           className="inline-block rounded-xl bg-[#5227FF] px-5 py-3 text-xs font-black uppercase tracking-[0.2em] text-white"
         >
           Open E-Clubs
-        </Link>
+        </a>
       </div>
     );
   }
@@ -246,12 +245,12 @@ export default function GigApplyPage() {
             >
               {loading ? "Submitting…" : "Submit project"}
             </button>
-            <Link
+            <a
               href="/gigs"
               className="rounded-xl border border-white/20 px-5 py-3 text-xs font-black uppercase tracking-[0.2em] text-white/80"
             >
               Cancel
-            </Link>
+            </a>
           </div>
         </form>
       </div>
@@ -318,12 +317,12 @@ export default function GigApplyPage() {
           >
             {loading ? "Submitting…" : "Submit application"}
           </button>
-          <Link
+          <a
             href="/gigs"
             className="rounded-xl border border-white/20 px-5 py-3 text-xs font-black uppercase tracking-[0.2em] text-white/80"
           >
             Cancel
-          </Link>
+          </a>
         </div>
       </form>
     </div>

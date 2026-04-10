@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher";
+import { ACTIVITY_CATEGORIES, logActivityEvent } from "@/lib/activity-events";
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getSessionUser();
@@ -24,13 +25,19 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   const postId = comment.postId;
   const clubId = comment.post.clubId;
   await prisma.comment.delete({ where: { id: params.id } });
-  const commentsCount = await prisma.comment.count({
-    where: { postId },
-  });
   await pusherServer.trigger(`club-${clubId}`, "comment-deleted", {
     postId,
     commentId: comment.id,
-    commentsCount,
+  });
+  await logActivityEvent({
+    actor: { userId: user.id, name: user.fullName, role: user.role },
+    category: ACTIVITY_CATEGORIES.social,
+    eventType: "post_comment_deleted",
+    summary: `${user.fullName} deleted a comment`,
+    entityType: "comment",
+    entityId: comment.id,
+    metadata: { postId },
+    broadcast: true,
   });
   
   return NextResponse.json({ success: true, message: "Comment deleted" });
@@ -77,6 +84,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       commentPreview: report.comment.content.slice(0, 120),
     },
     createdAt: new Date().toISOString(),
+  });
+  await logActivityEvent({
+    actor: { userId: user.id, name: user.fullName, role: user.role },
+    category: ACTIVITY_CATEGORIES.moderation,
+    eventType: "comment_report_created",
+    summary: `${reporterName} reported a comment`,
+    entityType: "comment",
+    entityId: params.id,
+    metadata: { reason, reportId: report.id },
+    broadcast: true,
   });
 
   return NextResponse.json({ success: true, message: "Report submitted to admin" });

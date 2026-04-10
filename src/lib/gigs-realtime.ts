@@ -2,9 +2,11 @@ import { serverCache } from "@/lib/server-cache";
 import { isPusherServerConfigured, pusherServer } from "@/lib/pusher";
 
 export const ECLUBS_PUSHER_CHANNEL = "occ-e-clubs";
+export const ECLUBS_PUSHER_EVENT = "update";
+export const GIGS_LIST_CACHE_KEY = "gigs:list:v2-no-legacy-seed";
 
 export function invalidateGigsListCache() {
-  serverCache.invalidate("gigs:list");
+  serverCache.invalidate(GIGS_LIST_CACHE_KEY);
 }
 
 export type EClubsPusherPayload =
@@ -24,7 +26,7 @@ export type EClubsPusherPayload =
 export async function broadcastEClubs(payload: EClubsPusherPayload) {
   if (!isPusherServerConfigured()) return;
   try {
-    await pusherServer.trigger(ECLUBS_PUSHER_CHANNEL, "update", payload);
+    await pusherServer.trigger(ECLUBS_PUSHER_CHANNEL, ECLUBS_PUSHER_EVENT, payload);
   } catch (e) {
     console.warn("[gigs-realtime] pusher trigger failed:", e);
   }

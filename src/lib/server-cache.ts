@@ -13,6 +13,7 @@ interface CacheEntry<T> {
 
 class ServerCache {
   private store = new Map<string, CacheEntry<unknown>>();
+  private readonly maxEntries = 500;
 
   get<T>(key: string): T | undefined {
     const entry = this.store.get(key);
@@ -25,6 +26,10 @@ class ServerCache {
   }
 
   set<T>(key: string, data: T, ttlMs: number): T {
+    if (this.store.size >= this.maxEntries && !this.store.has(key)) {
+      const first = this.store.keys().next().value;
+      if (first) this.store.delete(first);
+    }
     this.store.set(key, { data, expiresAt: Date.now() + ttlMs });
     return data;
   }

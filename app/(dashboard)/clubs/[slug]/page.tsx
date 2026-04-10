@@ -65,13 +65,7 @@ export default async function ClubDetailPage({
   });
 
   if (!club) {
-    return (
-      <div className="p-20 bg-red-100 text-red-900 rounded-3xl">
-        <h1 className="text-3xl font-black">CLUB NOT FOUND</h1>
-        <p className="mt-4">Slug received: <span className="font-mono bg-white px-2 py-1\">{params.slug}</span></p>
-        <p className="mt-2 text-sm opacity-60">Redirecting in 3 seconds...</p>
-      </div>
-    );
+    notFound();
   }
 
   const joined = club.members.some((membership) => membership.userId === user.id);

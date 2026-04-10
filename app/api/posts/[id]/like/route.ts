@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher";
 import { displayPostLikes } from "@/lib/socialDisplay";
 import { notifyPostLiked } from "@/lib/post-engagement-notify";
+import { ACTIVITY_CATEGORIES, logActivityEvent } from "@/lib/activity-events";
 
 export async function POST(_: Request, { params }: { params: { id: string } }) {
   const user = await getSessionUser();
@@ -14,6 +15,7 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
     select: {
       id: true,
       hidden: true,
+      likesCount: true,
       caption: true,
       content: true,
       clubId: true,
@@ -30,20 +32,41 @@ export async function POST(_: Request, { params }: { params: { id: string } }) {
 
   const addedLike = !existing;
 
-  if (existing) {
-    await prisma.postLike.delete({ where: { id: existing.id } });
-  } else {
-    await prisma.postLike.create({ data: { postId: params.id, userId: user.id } });
-  }
-
-  const realLikes = await prisma.postLike.count({ where: { postId: params.id } });
-  await prisma.post.update({
-    where: { id: params.id },
-    data: { likesCount: realLikes, likes: realLikes },
+  const updatedPost = await prisma.$transaction(async (tx) => {
+    if (existing) {
+      await tx.postLike.delete({ where: { id: existing.id } });
+      return tx.post.update({
+        where: { id: params.id },
+        data: {
+          likesCount: Math.max(0, (postRow.likesCount ?? 0) - 1),
+          likes: Math.max(0, (postRow.likesCount ?? 0) - 1),
+        },
+        select: { likesCount: true },
+      });
+    }
+    await tx.postLike.create({ data: { postId: params.id, userId: user.id } });
+    return tx.post.update({
+      where: { id: params.id },
+      data: {
+        likesCount: (postRow.likesCount ?? 0) + 1,
+        likes: (postRow.likesCount ?? 0) + 1,
+      },
+      select: { likesCount: true },
+    });
   });
 
-  const likesCount = displayPostLikes(params.id, realLikes);
+  const likesCount = displayPostLikes(params.id, updatedPost.likesCount ?? 0);
   const action = addedLike ? "like" : "unlike";
+  await logActivityEvent({
+    actor: { userId: user.id, name: user.fullName, role: user.role },
+    category: ACTIVITY_CATEGORIES.social,
+    eventType: addedLike ? "post_like_added" : "post_like_removed",
+    summary: `${user.fullName} ${addedLike ? "liked" : "unliked"} a post`,
+    entityType: "post",
+    entityId: params.id,
+    metadata: { clubId: postRow.clubId },
+    broadcast: true,
+  });
 
   try {
     await pusherServer.trigger(`club-${postRow.clubId}`, "new-like", {

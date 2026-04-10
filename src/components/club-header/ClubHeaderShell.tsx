@@ -13,7 +13,6 @@ import {
   ChevronRight,
   MoreHorizontal,
   Search,
-  Bell,
   Copy,
   LogOut,
   User,
@@ -182,9 +181,9 @@ export function ClubHeaderShell({ children, user }: ClubHeaderShellProps) {
                   <span className="text-[10px] font-medium text-white/40 truncate">{user.email}</span>
                 </div>
               </div>
-              <button className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-[#5227FF] transition-colors">
-                <MoreHorizontal className="h-4 w-4 text-white/50 group-hover:text-white" />
-              </button>
+              <div className="h-8 w-8 rounded-full bg-white/[0.04] flex items-center justify-center">
+                <MoreHorizontal className="h-4 w-4 text-white/25" />
+              </div>
             </div>
           </div>
         </motion.aside>
@@ -210,11 +209,9 @@ export function ClubHeaderShell({ children, user }: ClubHeaderShellProps) {
             <div className="flex flex-1 justify-end items-center gap-4 lg:gap-6">
               <div className="relative hidden w-full max-w-md lg:block group">
                 <Search className="absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-white/30 group-focus-within:text-[#5227FF] transition-colors" />
-                <input
-                  type="search"
-                  placeholder="Search members..."
-                  className="w-full rounded-full border border-white/[0.08] bg-black/30 py-3 pl-12 pr-4 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#5227FF]/60 focus:bg-white/[0.04] transition-all shadow-inner"
-                />
+                <div className="w-full rounded-full border border-white/[0.08] bg-black/30 py-3 pl-12 pr-4 text-sm text-white/40 shadow-inner">
+                  Search members (coming soon)
+                </div>
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3">
@@ -225,13 +222,6 @@ export function ClubHeaderShell({ children, user }: ClubHeaderShellProps) {
                 >
                   <LogOut className="h-4 w-4 shrink-0" strokeWidth={2.25} />
                   <span className="hidden sm:inline">Log out</span>
-                </button>
-                <button
-                  type="button"
-                  className="relative rounded-full bg-white/[0.03] border border-white/[0.08] p-2.5 hover:bg-white/[0.06] transition-colors"
-                  aria-label="Notifications"
-                >
-                  <Bell className="h-5 w-5 text-white/50" />
                 </button>
                 <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-white/10 shadow-[0_0_15px_rgba(0,0,0,0.5)]">
                   <div className="h-full w-full bg-gradient-to-br from-[#5227FF] to-[#8C6DFD] flex items-center justify-center text-white font-bold text-sm">

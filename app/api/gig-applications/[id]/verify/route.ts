@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notifyAllAdmins } from "@/lib/notify-admins";
 import { isPusherServerConfigured, pusherServer } from "@/lib/pusher";
+import { ACTIVITY_CATEGORIES, extractRequestIp, logActivityEvent } from "@/lib/activity-events";
 
 const VERIFY_ACTION = "VERIFY_GIG_SUBMISSION";
 
@@ -107,6 +108,17 @@ export async function PATCH(
   } catch (e) {
     console.warn("[gig-applications/verify] admin notify failed:", e);
   }
+  await logActivityEvent({
+    actor: { userId: user.id, name: user.fullName, role: user.role },
+    category: ACTIVITY_CATEGORIES.moderation,
+    eventType: "gig_submission_verified",
+    summary: `${user.fullName} verified a gig submission`,
+    entityType: "gig_application",
+    entityId: application.id,
+    metadata: { gigId: application.gigId, applicantId: application.userId },
+    ipAddress: extractRequestIp(req),
+    broadcast: true,
+  });
 
   return NextResponse.json({ success: true, verified: true });
 }

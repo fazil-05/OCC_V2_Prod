@@ -4,6 +4,7 @@ import { ZodError } from "zod";
 import { authCookieOptionsForDays, signAuthToken } from "@/lib/jwt";
 import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validations";
+import { ACTIVITY_CATEGORIES, extractRequestIp, logActivityEvent } from "@/lib/activity-events";
 
 const loginRateMap =
   (globalThis as unknown as { __occLoginRateMap?: Map<string, { count: number; resetAt: number }> })
@@ -51,6 +52,15 @@ export async function POST(req: NextRequest) {
     });
 
     if (!user) {
+      await logActivityEvent({
+        actor: { userId: null, name: email, role: null },
+        category: ACTIVITY_CATEGORIES.auth,
+        eventType: "login_failed",
+        summary: `Failed login attempt for ${email}`,
+        entityType: "user",
+        metadata: { reason: "user_not_found" },
+        ipAddress: extractRequestIp(req),
+      });
       loginRateMap.set(rateKey, {
         count: bucket && bucket.resetAt > now ? bucket.count + 1 : 1,
         resetAt: now + rateWindowMs,
@@ -60,6 +70,16 @@ export async function POST(req: NextRequest) {
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
+      await logActivityEvent({
+        actor: { userId: user.id, name: user.fullName, role: user.role },
+        category: ACTIVITY_CATEGORIES.auth,
+        eventType: "login_failed",
+        summary: `Failed login attempt for ${user.email}`,
+        entityType: "user",
+        entityId: user.id,
+        metadata: { reason: "invalid_password" },
+        ipAddress: extractRequestIp(req),
+      });
       loginRateMap.set(rateKey, {
         count: bucket && bucket.resetAt > now ? bucket.count + 1 : 1,
         resetAt: now + rateWindowMs,
@@ -104,6 +124,17 @@ export async function POST(req: NextRequest) {
     });
 
     response.cookies.set("occ-token", token, authCookieOptionsForDays(sessionDays));
+    await logActivityEvent({
+      actor: { userId: user.id, name: user.fullName, role: user.role },
+      category: ACTIVITY_CATEGORIES.auth,
+      eventType: "login_success",
+      summary: `${user.fullName} logged in`,
+      entityType: "user",
+      entityId: user.id,
+      metadata: { rememberMe, sessionDays },
+      ipAddress: extractRequestIp(req),
+      broadcast: true,
+    });
 
     return response;
   } catch (error: unknown) {

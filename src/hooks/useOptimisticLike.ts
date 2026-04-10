@@ -36,7 +36,7 @@ export function useOptimisticLike({
       if (!res.ok) throw new Error();
       const data = await res.json();
       if (typeof data.liked === "boolean") setLiked(data.liked);
-      if (typeof data.count === "number") setCount(data.count);
+      if (typeof data.likesCount === "number") setCount(data.likesCount);
     } catch {
       setLiked(prevLiked);
       setCount(prevCount);

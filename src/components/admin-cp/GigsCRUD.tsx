@@ -32,6 +32,7 @@ export function GigsCRUD({ gigs: initial, clubs }: { gigs: Gig[]; clubs: { id: s
   const [openId, setOpenId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [verifyBusyId, setVerifyBusyId] = useState<string | null>(null);
   const [form, setForm] = useState({ title: "", description: "", payMin: 0, payMax: 0, clubId: clubs[0]?.id || "" });
 
@@ -72,6 +73,35 @@ export function GigsCRUD({ gigs: initial, clubs }: { gigs: Gig[]; clubs: { id: s
       toast.error("Network error");
     } finally {
       setVerifyBusyId(null);
+    }
+  };
+
+  const setStatus = async (applicationId: string, status: "APPROVED" | "REJECTED") => {
+    setBusyId(applicationId);
+    try {
+      const res = await fetch(`/api/gig-applications/${applicationId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) {
+        toast.error(data?.error || "Could not update status");
+        return;
+      }
+      setGigs((prev) =>
+        prev.map((g) => ({
+          ...g,
+          applications: g.applications.map((a) =>
+            a.id === applicationId ? { ...a, status } : a,
+          ),
+        })),
+      );
+      toast.success(status === "APPROVED" ? "Application approved" : "Application rejected");
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -124,6 +154,28 @@ export function GigsCRUD({ gigs: initial, clubs }: { gigs: Gig[]; clubs: { id: s
 
                           {a.message ? (
                             <p className="mt-2 text-[12px] text-white/45">{a.message}</p>
+                          ) : null}
+
+                          {a.status === "PENDING" ? (
+                            <div className="mt-2 flex gap-2">
+                              <button
+                                type="button"
+                                disabled={busyId === a.id}
+                                onClick={() => void setStatus(a.id, "APPROVED")}
+                                className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-emerald-100 disabled:opacity-50"
+                              >
+                                {busyId === a.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                                Approve
+                              </button>
+                              <button
+                                type="button"
+                                disabled={busyId === a.id}
+                                onClick={() => void setStatus(a.id, "REJECTED")}
+                                className="inline-flex items-center gap-1 rounded-lg bg-red-500/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-red-100 disabled:opacity-50"
+                              >
+                                Reject
+                              </button>
+                            </div>
                           ) : null}
 
                           {hasSubmission ? (

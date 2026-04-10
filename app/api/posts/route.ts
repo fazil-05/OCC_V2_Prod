@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { postCreateSchema } from "@/lib/validations";
 import { isPusherServerConfigured, pusherServer } from "@/lib/pusher";
 import { serverCache } from "@/lib/server-cache";
+import { ACTIVITY_CATEGORIES, logActivityEvent } from "@/lib/activity-events";
 
 export async function GET(req: NextRequest) {
   const clubId = req.nextUrl.searchParams.get("clubId");
@@ -57,23 +58,7 @@ export async function GET(req: NextRequest) {
           createdAt: true,
         },
       },
-      comments: {
-        select: {
-          id: true,
-          postId: true,
-          userId: true,
-          content: true,
-          createdAt: true,
-        },
-      },
-      postLikes: {
-        select: {
-          id: true,
-          postId: true,
-          userId: true,
-          createdAt: true,
-        },
-      },
+      _count: { select: { comments: true } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -175,6 +160,16 @@ export async function POST(req: NextRequest) {
 
   // Invalidate caches so subsequent reads show fresh data immediately
   serverCache.invalidatePrefix("clubs:");
+  await logActivityEvent({
+    actor: { userId: user.id, name: user.fullName, role: user.role },
+    category: ACTIVITY_CATEGORIES.content,
+    eventType: "post_created",
+    summary: `${user.fullName} created a post`,
+    entityType: "post",
+    entityId: post.id,
+    metadata: { clubId: resolvedClubId, type: post.type },
+    broadcast: true,
+  });
 
   return NextResponse.json({ success: true, post }, { status: 201 });
 }

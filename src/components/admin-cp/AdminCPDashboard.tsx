@@ -38,22 +38,42 @@ type Props = {
   };
   recentAudit: { id: string; action: string; entity: string; adminEmail: string; createdAt: string }[];
   recentSocial: SocialRow[];
+  recentActivity: {
+    id: string;
+    actorName: string;
+    actorRole: string | null;
+    category: string;
+    eventType: string;
+    summary: string;
+    entityType: string | null;
+    entityId: string | null;
+    createdAt: string;
+  }[];
 };
 
-export function AdminCPDashboard({ stats, recentAudit, recentSocial }: Props) {
+export function AdminCPDashboard({ stats, recentAudit, recentSocial, recentActivity }: Props) {
   const [liveSocial, setLiveSocial] = useState(recentSocial);
+  const [liveActivity, setLiveActivity] = useState(recentActivity);
   const socialKey = useMemo(
     () => recentSocial.map((r) => `${r.id}:${r.createdAt}`).join("|"),
     [recentSocial],
+  );
+  const activityKey = useMemo(
+    () => recentActivity.map((r) => `${r.id}:${r.createdAt}`).join("|"),
+    [recentActivity],
   );
 
   useEffect(() => {
     setLiveSocial(recentSocial);
   }, [socialKey]);
+  useEffect(() => {
+    setLiveActivity(recentActivity);
+  }, [activityKey]);
 
   useEffect(() => {
-    if (!pusherClient) return;
-    const ch = pusherClient.subscribe("admin-global");
+    const client = pusherClient;
+    if (!client) return;
+    const ch = client.subscribe("admin-global");
     const onSocial = (data: {
       kind?: string;
       actorName?: string;
@@ -62,11 +82,12 @@ export function AdminCPDashboard({ stats, recentAudit, recentSocial }: Props) {
       createdAt?: string;
     }) => {
       const id = `rt-${data.kind || "social"}-${Date.now()}`;
+      const kind: SocialRow["kind"] = data.kind === "comment" ? "comment" : "like";
       setLiveSocial((prev) =>
         [
           {
             id,
-            kind: data.kind === "comment" ? "comment" : "like",
+            kind,
             actorName: data.actorName || "Member",
             summary: data.summary || "",
             postId: data.postId || "",
@@ -77,9 +98,39 @@ export function AdminCPDashboard({ stats, recentAudit, recentSocial }: Props) {
       );
     };
     ch.bind("social-activity", onSocial);
+    ch.bind("activity-event", (data: {
+      id?: string;
+      actorName?: string;
+      actorRole?: string | null;
+      category?: string;
+      eventType?: string;
+      summary?: string;
+      entityType?: string | null;
+      entityId?: string | null;
+      createdAt?: string;
+    }) => {
+      const id = data.id || `rt-activity-${Date.now()}`;
+      setLiveActivity((prev) =>
+        [
+          {
+            id,
+            actorName: data.actorName || "Unknown",
+            actorRole: data.actorRole ?? null,
+            category: data.category || "misc",
+            eventType: data.eventType || "event",
+            summary: data.summary || "Activity",
+            entityType: data.entityType ?? null,
+            entityId: data.entityId ?? null,
+            createdAt: data.createdAt || new Date().toISOString(),
+          },
+          ...prev,
+        ].slice(0, 30),
+      );
+    });
     return () => {
       ch.unbind("social-activity", onSocial);
-      pusherClient.unsubscribe("admin-global");
+      ch.unbind("activity-event");
+      client.unsubscribe("admin-global");
     };
   }, []);
 
@@ -199,6 +250,44 @@ export function AdminCPDashboard({ stats, recentAudit, recentSocial }: Props) {
                     </span>
                   </div>
                 </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {liveActivity.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.22 }}
+          className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6"
+        >
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-white">Recent platform activity (7d)</h2>
+            <Link href={adminCpHref("/activity")} className="text-xs text-[#5227FF] hover:underline">
+              View all →
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {liveActivity.map((row) => (
+              <div key={row.id} className="flex items-start justify-between gap-4 border-b border-white/[0.04] py-2.5 last:border-0">
+                <div className="min-w-0">
+                  <p className="text-xs text-white/90">
+                    <span className="font-semibold text-white">{row.actorName}</span>{" "}
+                    <span className="text-white/60">{row.summary}</span>
+                  </p>
+                  <div className="mt-1 flex items-center gap-2 text-[10px] text-white/35">
+                    <span className="rounded bg-white/5 px-1.5 py-0.5 uppercase tracking-wider">
+                      {row.category}
+                    </span>
+                    <span>{row.eventType}</span>
+                    {row.actorRole ? <span>· {row.actorRole}</span> : null}
+                  </div>
+                </div>
+                <span className="shrink-0 text-[10px] text-white/30">
+                  {formatDistanceToNow(new Date(row.createdAt), { addSuffix: true })}
+                </span>
               </div>
             ))}
           </div>

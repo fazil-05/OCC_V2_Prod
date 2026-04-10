@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { generateSixDigitOtp, sha256Hex } from "@/lib/otp";
 import { sendOtpEmail } from "@/lib/smtp";
+import { ACTIVITY_CATEGORIES, extractRequestIp, logActivityEvent } from "@/lib/activity-events";
 
 const sendOtpSchema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -18,6 +19,15 @@ export async function POST(req: NextRequest) {
     // Avoid user enumeration but also reduce unnecessary OTP spam.
     const user = await prisma.user.findUnique({ where: { email } }).catch(() => null);
     if (!user) {
+      await logActivityEvent({
+        actor: { userId: null, name: email, role: null },
+        category: ACTIVITY_CATEGORIES.auth,
+        eventType: "password_reset_otp_requested",
+        summary: `Password reset OTP requested for ${email}`,
+        entityType: "user",
+        metadata: { userFound: false },
+        ipAddress: extractRequestIp(req),
+      });
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
@@ -58,8 +68,21 @@ export async function POST(req: NextRequest) {
     });
 
     await sendOtpEmail({ to: email, code: otp, purpose });
+    await logActivityEvent({
+      actor: { userId: user.id, name: user.fullName, role: user.role },
+      category: ACTIVITY_CATEGORIES.auth,
+      eventType: "password_reset_otp_sent",
+      summary: `Password reset OTP sent to ${email}`,
+      entityType: "user",
+      entityId: user.id,
+      ipAddress: extractRequestIp(req),
+      broadcast: true,
+    });
     return NextResponse.json({ success: true }, { status: 200 });
-  } catch {
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.issues[0]?.message || "Invalid request" }, { status: 400 });
+    }
     return NextResponse.json({ error: "OTP send failed" }, { status: 500 });
   }
 }

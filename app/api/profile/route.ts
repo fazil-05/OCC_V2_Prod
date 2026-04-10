@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher";
 import { profileUpdateSchema } from "@/lib/validations";
 import { logSuspiciousAccess } from "@/lib/security";
+import { ACTIVITY_CATEGORIES, extractRequestIp, logActivityEvent } from "@/lib/activity-events";
 
 export async function GET() {
   const user = await getSessionUser();
@@ -123,6 +124,17 @@ export async function PATCH(req: NextRequest) {
     if (user.referredBy) {
       await pusherServer.trigger(`header-${user.referredBy}`, "new-member", { userId: user.id }); // reuse 'new-member' event to trigger router.refresh() on header
     }
+    await logActivityEvent({
+      actor: { userId: user.id, name: user.fullName, role: user.role },
+      category: ACTIVITY_CATEGORIES.profile,
+      eventType: "profile_updated",
+      summary: `${user.fullName} updated profile`,
+      entityType: "user",
+      entityId: user.id,
+      metadata: { changedFields: Object.keys(data) },
+      ipAddress: extractRequestIp(req),
+      broadcast: true,
+    });
 
     return NextResponse.json({ success: true, user: updated });
   } catch (error) {

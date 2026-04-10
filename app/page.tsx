@@ -1,8 +1,6 @@
-import dynamic from "next/dynamic";
 import { BackgroundFramePreloader } from "@/components/BackgroundFramePreloader";
 import { LandingRoutePrefetch } from "@/components/LandingRoutePrefetch";
-
-const HomePage = dynamic(() => import("@/app/pages/HomePage"), { ssr: false });
+import HomePage from "@/app/pages/HomePage";
 
 export default function Page() {
   return (

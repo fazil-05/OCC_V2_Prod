@@ -1,4 +1,5 @@
-import { SignJWT, jwtVerify } from "jose";
+import { SignJWT } from "jose/jwt/sign";
+import { jwtVerify } from "jose/jwt/verify";
 
 /** Keep login alive for a few days on refresh/navigation (requested 2-4 days). */
 const JWT_EXPIRY = "4d";

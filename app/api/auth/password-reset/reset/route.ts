@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { resetPasswordSchema } from "@/lib/validations";
 import { authCookieOptions, signAuthToken } from "@/lib/jwt";
 import { sha256Hex } from "@/lib/otp";
+import { ACTIVITY_CATEGORIES, extractRequestIp, logActivityEvent } from "@/lib/activity-events";
 
 export async function POST(req: NextRequest) {
   try {
@@ -60,6 +61,16 @@ export async function POST(req: NextRequest) {
     await prisma.user.update({
       where: { id: user.id },
       data: { password: hashedPassword },
+    });
+    await logActivityEvent({
+      actor: { userId: user.id, name: user.fullName, role: user.role },
+      category: ACTIVITY_CATEGORIES.auth,
+      eventType: "password_reset_completed",
+      summary: `${user.fullName} reset password`,
+      entityType: "user",
+      entityId: user.id,
+      ipAddress: extractRequestIp(req),
+      broadcast: true,
     });
 
     // Auto-login after successful reset.

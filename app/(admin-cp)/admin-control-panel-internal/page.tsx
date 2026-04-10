@@ -14,7 +14,8 @@ export default async function AdminCPPage() {
     prisma.suspiciousAccess.count({ where: { resolved: false } }).catch(() => 0),
   ]);
 
-  const [recentAudit, recentSocialRaw] = await Promise.all([
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const [recentAudit, recentSocialRaw, recentActivity] = await Promise.all([
     prisma.auditLog
       .findMany({
         take: 5,
@@ -23,6 +24,24 @@ export default async function AdminCPPage() {
       })
       .catch(() => []),
     getRecentGlobalSocialActivity(14).catch(() => []),
+    prisma.activityEvent
+      .findMany({
+        where: { createdAt: { gte: sevenDaysAgo } },
+        take: 20,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          actorName: true,
+          actorRole: true,
+          category: true,
+          eventType: true,
+          summary: true,
+          entityType: true,
+          entityId: true,
+          createdAt: true,
+        },
+      })
+      .catch(() => []),
   ]);
 
   return (
@@ -35,6 +54,13 @@ export default async function AdminCPPage() {
         actorName: r.actorName,
         summary: r.summary,
         postId: r.postId,
+        createdAt: r.createdAt.toISOString(),
+      }))}
+      recentActivity={recentActivity.map((r) => ({
+        ...r,
+        actorRole: r.actorRole ?? null,
+        entityType: r.entityType ?? null,
+        entityId: r.entityId ?? null,
         createdAt: r.createdAt.toISOString(),
       }))}
     />

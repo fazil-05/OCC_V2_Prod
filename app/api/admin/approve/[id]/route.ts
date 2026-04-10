@@ -5,6 +5,7 @@ import { generateReferralCode } from "@/lib/referral";
 import { pusherServer } from "@/lib/pusher";
 import { checkAdminMutationRateLimit } from "@/lib/admin-rate-limit";
 import { logAudit } from "@/lib/audit";
+import { ACTIVITY_CATEGORIES, extractRequestIp, logActivityEvent } from "@/lib/activity-events";
 
 export async function PATCH(_req: NextRequest, { params }: { params: { id: string } }) {
   const admin = await requireAdminPermission("approvals", "approve");
@@ -106,6 +107,17 @@ export async function PATCH(_req: NextRequest, { params }: { params: { id: strin
     entityId: target.id,
     details: { referralCode: code, clubId: club.id },
     ipAddress: ip,
+  });
+  await logActivityEvent({
+    actor: { userId: admin.id, name: admin.fullName, role: "ADMIN" },
+    category: ACTIVITY_CATEGORIES.admin,
+    eventType: "club_header_approved",
+    summary: `${admin.fullName} approved a club header application`,
+    entityType: "user",
+    entityId: target.id,
+    metadata: { clubId: club.id },
+    ipAddress: extractRequestIp(_req),
+    broadcast: true,
   });
 
   return NextResponse.json({ success: true, referralCode: code });

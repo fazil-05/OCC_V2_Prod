@@ -56,13 +56,13 @@ export default function LiquidEther({
     pause: () => void;
     resize: () => void;
     output?: { simulation: { options: Record<string, unknown>; resize: () => void } };
-    autoDriver?: {
+    autoDriver: {
       enabled: boolean;
       speed: number;
       resumeDelay: number;
       rampDurationMs: number;
       mouse: { autoIntensity: number; takeoverDuration: number };
-    };
+    } | null;
   } | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -166,7 +166,8 @@ export default function LiquidEther({
       coords = new THREE.Vector2();
       coords_old = new THREE.Vector2();
       diff = new THREE.Vector2();
-      timer: ReturnType<typeof setTimeout> | null = null;
+      /** Browser `setTimeout` id; avoid `ReturnType<typeof setTimeout>` (Node `Timeout` vs DOM `number`). */
+      timer: number | null = null;
       /** Latest pointer; applied once per rAF in flushPointer() to avoid main-thread overload. */
       pendingClientX: number | null = null;
       pendingClientY: number | null = null;
@@ -613,7 +614,7 @@ export default function LiquidEther({
         this.props = props || {};
         this.uniforms = this.props.material?.uniforms;
       }
-      init() {
+      init(..._args: unknown[]) {
         this.scene = new THREE.Scene();
         this.camera = new THREE.Camera();
         if (this.uniforms && this.props.material) {
@@ -623,7 +624,8 @@ export default function LiquidEther({
           this.scene.add(this.plane);
         }
       }
-      update() {
+      /** Subclasses pass step options; base only runs the fullscreen pass. */
+      update(..._args: unknown[]) {
         if (!Common.renderer || !this.scene || !this.camera) return;
         Common.renderer.setRenderTarget(this.props.output || null);
         Common.renderer.render(this.scene, this.camera);
@@ -953,7 +955,7 @@ export default function LiquidEther({
       }
       createAllFBO() {
         const type = this.getFloatType();
-        const opts: THREE.WebGLRenderTargetOptions = {
+        const opts: THREE.RenderTargetOptions = {
           type,
           depthBuffer: false,
           stencilBuffer: false,

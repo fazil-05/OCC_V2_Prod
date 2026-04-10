@@ -70,12 +70,12 @@ export async function POST(req: NextRequest) {
         ? "occ/posts"
         : `occ/${purpose.replace(/[^a-z0-9/_-]/gi, "_").slice(0, 32) || "uploads"}`;
 
-  async function tryVercelBlob(): Promise<string | null> {
+  async function tryVercelBlob(upload: File): Promise<string | null> {
     if (!process.env.BLOB_READ_WRITE_TOKEN) return null;
     const fileName = `uploads/${userId}/${randomUUID()}.${ext}`;
-    const blob = await put(fileName, file, {
+    const blob = await put(fileName, upload, {
       access: "public",
-      contentType: file.type || "application/octet-stream",
+      contentType: upload.type || "application/octet-stream",
     });
     return blob.url;
   }
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error("[upload] Cloudinary failed:", e);
       try {
-        const blobUrl = await tryVercelBlob();
+        const blobUrl = await tryVercelBlob(file);
         if (blobUrl) {
           console.warn("[upload] Used Vercel Blob after Cloudinary error");
           return NextResponse.json({ success: true, url: blobUrl });
@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
   // 2) Vercel Blob
   if (process.env.BLOB_READ_WRITE_TOKEN) {
     try {
-      const url = await tryVercelBlob();
+      const url = await tryVercelBlob(file);
       if (url) return NextResponse.json({ success: true, url });
     } catch (e) {
       console.error("[upload] Blob failed:", e);
