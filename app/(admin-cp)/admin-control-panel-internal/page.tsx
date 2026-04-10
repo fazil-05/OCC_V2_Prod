@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { AdminCPDashboard } from "@/components/admin-cp/AdminCPDashboard";
+import { getRecentGlobalSocialActivity } from "@/lib/recent-social-activity";
 
 export default async function AdminCPPage() {
   const [totalUsers, activeClubs, pendingApprovals, totalPosts, totalEvents, totalGigs, recentSignups, alertCount] = await Promise.all([
@@ -13,16 +14,29 @@ export default async function AdminCPPage() {
     prisma.suspiciousAccess.count({ where: { resolved: false } }).catch(() => 0),
   ]);
 
-  const recentAudit = await prisma.auditLog.findMany({
-    take: 5,
-    orderBy: { createdAt: "desc" },
-    select: { id: true, action: true, entity: true, adminEmail: true, createdAt: true },
-  }).catch(() => []);
+  const [recentAudit, recentSocialRaw] = await Promise.all([
+    prisma.auditLog
+      .findMany({
+        take: 5,
+        orderBy: { createdAt: "desc" },
+        select: { id: true, action: true, entity: true, adminEmail: true, createdAt: true },
+      })
+      .catch(() => []),
+    getRecentGlobalSocialActivity(14).catch(() => []),
+  ]);
 
   return (
     <AdminCPDashboard
       stats={{ totalUsers, activeClubs, pendingApprovals, totalPosts, totalEvents, totalGigs, recentSignups, alertCount }}
       recentAudit={recentAudit.map((a) => ({ ...a, createdAt: a.createdAt.toISOString() }))}
+      recentSocial={recentSocialRaw.map((r) => ({
+        id: r.id,
+        kind: r.kind,
+        actorName: r.actorName,
+        summary: r.summary,
+        postId: r.postId,
+        createdAt: r.createdAt.toISOString(),
+      }))}
     />
   );
 }

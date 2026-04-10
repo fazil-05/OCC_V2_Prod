@@ -61,6 +61,20 @@ export default async function DashboardPage() {
     console.error("[dashboard] data load failed:", error);
   }
 
+  const gigIds = gigs.map((g) => g.id);
+  let gigApplicationByGigId = new Map<string, string>();
+  if (gigIds.length) {
+    try {
+      const myApps = await prisma.gigApplication.findMany({
+        where: { userId: user.id, gigId: { in: gigIds } },
+        select: { gigId: true, status: true },
+      });
+      gigApplicationByGigId = new Map(myApps.map((a) => [a.gigId, a.status]));
+    } catch (e) {
+      console.error("[dashboard] gig applications load failed:", e);
+    }
+  }
+
   const joinedClubIds = new Set(memberships.map(m => m.clubId));
 
   const trendingClubs = (clubs.length ? clubs : []).map(c => {
@@ -69,7 +83,9 @@ export default async function DashboardPage() {
       slug: c.slug,
       label: c.name,
       imageUrl: resolvePostImageUrlForFeed(c.coverImage, c.name),
-      memberCount: formatSocialCount(displayClubMembers(c.id, c.memberCount || 0)),
+      memberCount: formatSocialCount(
+        displayClubMembers(c.id, c.memberCount || 0, c.memberDisplayBase),
+      ),
       joined: joinedClubIds.has(c.id),
     };
   });
@@ -83,8 +99,9 @@ export default async function DashboardPage() {
             : [postImg];
 
         const avatar = resolveClubAvatar(p.user.avatar, p.club?.name || "OCC");
-        const memberCountRaw = p.club ? displayClubMembers(p.club.id, p.club.memberCount || 0) : 0;
-        const memberCountCapped = Math.min(800, Math.max(0, memberCountRaw));
+        const memberCountRaw = p.club
+          ? displayClubMembers(p.club.id, p.club.memberCount || 0, p.club.memberDisplayBase)
+          : 0;
         return {
           id: p.id,
           username: p.user.fullName,
@@ -98,7 +115,7 @@ export default async function DashboardPage() {
           sharesCount: p.sharesCount || 0,
           clubId: p.clubId,
           clubName: p.club?.name || "OCC Club",
-          clubMembersLabel: `${memberCountCapped} Members`,
+          clubMembersLabel: `${formatSocialCount(memberCountRaw)} Members`,
           commentsCount: p._count.comments || 0,
         };
       })
@@ -143,6 +160,7 @@ export default async function DashboardPage() {
 
       <div className="hidden lg:block w-[min(260px,24vw)] xl:w-[280px] 2xl:w-[300px] shrink-0 space-y-8 xl:space-y-10 min-w-0">
         <OCCRightRail 
+          currentUserId={user.id}
           events={events.map(e => {
              return {
               id: e.id,
@@ -165,6 +183,7 @@ export default async function DashboardPage() {
             title: g.title,
             description: g.description,
             brand: "OCC ELITE",
+            applicationStatus: gigApplicationByGigId.get(g.id) ?? null,
           }))}
         />
       </div>

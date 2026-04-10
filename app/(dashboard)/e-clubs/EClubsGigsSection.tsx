@@ -21,7 +21,12 @@ export async function EClubsGigsSection() {
       postedBy: { select: { fullName: true } },
       applications: {
         where: { userId: user.id },
-        select: { id: true, status: true },
+        select: {
+          id: true,
+          status: true,
+          workDescription: true,
+          submissionFileUrl: true,
+        },
       },
     },
   });

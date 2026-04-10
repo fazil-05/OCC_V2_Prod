@@ -64,23 +64,34 @@ export function NotificationBell({
     const client = pusherClient;
     const adminChannelName = "admin-global";
     const adminChannel = client.subscribe(adminChannelName);
+    const pushAdminItem = (data: { title?: string; message?: string; createdAt?: string }) => {
+      setItems((prev) => [
+        {
+          id: crypto.randomUUID(),
+          title: data.title || "Update",
+          message: data.message || "",
+          read: false,
+          createdAt: data.createdAt || new Date().toISOString(),
+        },
+        ...prev,
+      ]);
+    };
+    adminChannel.bind("intel-report", (data: { title?: string; message?: string; createdAt?: string }) => {
+      pushAdminItem({
+        title: data.title || "Intel report",
+        message: data.message || "A new comment report was submitted.",
+        createdAt: data.createdAt,
+      });
+    });
     adminChannel.bind(
-      "intel-report",
+      "social-activity",
       (data: { title?: string; message?: string; createdAt?: string }) => {
-        setItems((prev) => [
-          {
-            id: crypto.randomUUID(),
-            title: data.title || "Intel report",
-            message: data.message || "A new comment report was submitted.",
-            read: false,
-            createdAt: data.createdAt || new Date().toISOString(),
-          },
-          ...prev,
-        ]);
+        pushAdminItem(data);
       },
     );
     return () => {
       adminChannel.unbind("intel-report");
+      adminChannel.unbind("social-activity");
       client.unsubscribe(adminChannelName);
     };
   }, []);

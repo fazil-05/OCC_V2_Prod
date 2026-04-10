@@ -3,6 +3,7 @@ import { requireAdminPermission } from "@/lib/admin-api-guard";
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher";
 import { checkAdminMutationRateLimit } from "@/lib/admin-rate-limit";
+import { logAudit } from "@/lib/audit";
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const admin = await requireAdminPermission("approvals", "reject");
@@ -55,5 +56,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   } catch (pusherErr) {
     console.warn("[admin/reject] Pusher notification failed (non-critical):", pusherErr);
   }
+  const forwarded = req.headers.get("x-forwarded-for") || "";
+  const ip = forwarded.split(",")[0]?.trim() || "unknown";
+  await logAudit({
+    adminId: admin.id,
+    adminEmail: admin.email,
+    action: "REJECT_HEADER",
+    entity: "user",
+    entityId: target.id,
+    details: { reason },
+    ipAddress: ip,
+  });
   return NextResponse.json({ success: true });
 }

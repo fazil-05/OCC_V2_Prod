@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const user = await getSessionUser();
-  if (!user || user.role !== "CLUB_HEADER") {
+  if (!user || user.role !== "CLUB_HEADER" || user.approvalStatus !== "APPROVED") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

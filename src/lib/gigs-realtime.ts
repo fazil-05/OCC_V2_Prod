@@ -11,13 +11,15 @@ export type EClubsPusherPayload =
   | { type: "gig-created"; gigId: string }
   | { type: "gig-updated"; gigId: string }
   | { type: "gig-deleted"; gigId: string }
-  | { type: "gig-application"; gigId: string; applicationId: string }
+  | { type: "gig-application"; gigId: string; applicationId: string; userId: string }
   | {
       type: "gig-application-status";
       gigId: string;
       applicationId: string;
       status: "APPROVED" | "REJECTED";
-    };
+      userId: string;
+    }
+  | { type: "gig-submission"; gigId: string; applicationId: string; userId: string };
 
 export async function broadcastEClubs(payload: EClubsPusherPayload) {
   if (!isPusherServerConfigured()) return;

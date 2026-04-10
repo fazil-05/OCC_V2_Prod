@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
 import { Resend } from "resend";
 
-export type OtpEmailPurpose = "REGISTER" | "RESET_PASSWORD" | "ADMIN_LOGIN";
+export type OtpEmailPurpose = "REGISTER" | "RESET_PASSWORD";
 
 export async function sendOtpEmail(params: {
   to: string;
@@ -11,9 +11,7 @@ export async function sendOtpEmail(params: {
   const subject =
     params.purpose === "REGISTER"
       ? "Your OCC registration OTP"
-      : params.purpose === "RESET_PASSWORD"
-        ? "Your OCC password reset OTP"
-        : "Your OCC admin login OTP";
+      : "Your OCC password reset OTP";
 
   const text =
     `Your 6-digit OTP is: ${params.code}\n\n` +

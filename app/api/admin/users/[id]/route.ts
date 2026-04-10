@@ -3,6 +3,7 @@ import { requireAdminPermission } from "@/lib/admin-api-guard";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { checkAdminMutationRateLimit } from "@/lib/admin-rate-limit";
+import { logAudit } from "@/lib/audit";
 
 const patchSchema = z.object({
   suspended: z.boolean(),
@@ -28,6 +29,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   await prisma.user.update({
     where: { id: params.id },
     data: { suspended },
+  });
+
+  const forwarded = req.headers.get("x-forwarded-for") || "";
+  const ip = forwarded.split(",")[0]?.trim() || "unknown";
+  await logAudit({
+    adminId: admin.id,
+    adminEmail: admin.email,
+    action: suspended ? "SUSPEND_USER" : "UNSUSPEND_USER",
+    entity: "user",
+    entityId: params.id,
+    details: { suspended },
+    ipAddress: ip,
   });
 
   return NextResponse.json({ success: true });

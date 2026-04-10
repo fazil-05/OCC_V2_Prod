@@ -42,6 +42,8 @@ export async function getSessionUser() {
       },
     });
     if (user?.suspended) return null;
+    // Security policy: students must complete OTP verification before any authenticated access.
+    if (user?.role === "STUDENT" && !user.emailVerified) return null;
     return user;
   } catch {
     return null;
@@ -51,7 +53,7 @@ export async function getSessionUser() {
 export async function requireUser() {
   const user = await getSessionUser();
   if (!user) {
-    redirect("/login?reauth=1");
+    redirect("/login");
   }
   return user;
 }
@@ -60,7 +62,7 @@ export async function requireUser() {
 export async function requireAdmin() {
   const user = await getSessionUser();
   if (!user) {
-    redirect(`${staffGateHref()}?reauth=1`);
+    redirect(staffGateHref());
   }
   if (user.role !== "ADMIN") {
     redirect("/dashboard");

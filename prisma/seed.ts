@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { OCC_DEFAULT_CLUBS } from "../src/lib/occDefaultClubs";
+import { backfillClubMemberDisplayBases, OCC_DEFAULT_CLUBS } from "../src/lib/occDefaultClubs";
+import { randomMemberDisplayBase } from "../src/lib/socialDisplay";
 import { LEGACY_DUMMY_GIG_IDS } from "../src/lib/legacyDummyGigs";
 
 const prisma = new PrismaClient();
@@ -10,8 +11,11 @@ async function main() {
     where: { id: { in: LEGACY_DUMMY_GIG_IDS } },
   });
 
-  const staffEmail = process.env.OCC_STAFF_ADMIN_EMAIL || "occ-staff-r8k2@occ-local.dev";
-  const staffPassword = process.env.OCC_STAFF_ADMIN_PASSWORD || "Kx9#mQ2$vL8nW4pR@bF7tY1z";
+  const staffEmail = process.env.OCC_STAFF_ADMIN_EMAIL;
+  const staffPassword = process.env.OCC_STAFF_ADMIN_PASSWORD;
+  if (!staffEmail || !staffPassword) {
+    throw new Error("OCC_STAFF_ADMIN_EMAIL and OCC_STAFF_ADMIN_PASSWORD must be set for seeding.");
+  }
   const adminHash = await bcrypt.hash(staffPassword, 12);
   await prisma.user.upsert({
     where: { email: staffEmail },
@@ -36,9 +40,10 @@ async function main() {
     await prisma.club.upsert({
       where: { slug: club.slug },
       update: {},
-      create: club,
+      create: { ...club, memberDisplayBase: randomMemberDisplayBase() },
     });
   }
+  await backfillClubMemberDisplayBases(prisma);
 
   const clubMap = await prisma.club.findMany();
   const clubBySlug = Object.fromEntries(clubMap.map((club) => [club.slug, club]));

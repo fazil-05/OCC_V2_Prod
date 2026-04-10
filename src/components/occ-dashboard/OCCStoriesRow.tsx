@@ -34,7 +34,9 @@ export function OCCTrendingClubs({ clubs }: { clubs: OCCTrendingClub[] }) {
       const channel = pusherClient?.subscribe(`club-${club.id}`);
       if (channel) {
         channel.bind("member-joined", (data: any) => {
-          const display = data.displayMemberCount ?? displayClubMembers(data.clubId, data.memberCount);
+          const display =
+            data.displayMemberCount ??
+            displayClubMembers(data.clubId, data.memberCount, data.memberDisplayBase);
           setLocalClubs((prev) => prev.map((c) => c.id === data.clubId ? { ...c, memberCount: formatSocialCount(display) } : c));
         });
       }

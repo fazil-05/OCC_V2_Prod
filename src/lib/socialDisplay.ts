@@ -16,8 +16,24 @@ export function displayPostLikes(postId: string, realLikes: number): number {
   return dummySocialSeed(postId, "post-likes") + Math.max(0, realLikes);
 }
 
-export function displayClubMembers(clubId: string, realMembers: number): number {
-  return dummySocialSeed(clubId, "club-followers") + Math.max(0, realMembers);
+/** Random 3-digit display base in [100, 799] for new clubs. */
+export function randomMemberDisplayBase(): number {
+  return 100 + Math.floor(Math.random() * 700);
+}
+
+/**
+ * Public-facing member count: stored base (when set) or legacy per-club seed, plus real memberships.
+ */
+export function displayClubMembers(
+  clubId: string,
+  realMembers: number,
+  storedBase?: number | null,
+): number {
+  const base =
+    storedBase != null && storedBase >= 100 && storedBase < 800
+      ? storedBase
+      : dummySocialSeed(clubId, "club-followers");
+  return base + Math.max(0, realMembers);
 }
 
 export function formatSocialCount(n: number): string {

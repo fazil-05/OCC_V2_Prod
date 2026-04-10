@@ -1,6 +1,8 @@
 import { SignJWT, jwtVerify } from "jose";
 
-const JWT_EXPIRY = "7d";
+/** Keep login alive for a few days on refresh/navigation (requested 2-4 days). */
+const JWT_EXPIRY = "4d";
+const AUTH_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 4;
 
 export type AuthTokenPayload = {
   userId: string;
@@ -20,11 +22,14 @@ function getJwtSecret() {
   return new TextEncoder().encode(secret);
 }
 
-export async function signAuthToken(payload: AuthTokenPayload) {
+export async function signAuthToken(
+  payload: AuthTokenPayload,
+  opts?: { expiresIn?: string },
+) {
   const payloadToSign = { ...payload } as unknown as { [key: string]: unknown };
   return new SignJWT(payloadToSign)
     .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime(JWT_EXPIRY)
+    .setExpirationTime(opts?.expiresIn || JWT_EXPIRY)
     .sign(getJwtSecret());
 }
 
@@ -38,5 +43,13 @@ export const authCookieOptions = {
   secure: process.env.NODE_ENV === "production",
   sameSite: "lax" as const,
   path: "/",
-  maxAge: 60 * 60 * 24 * 7,
+  maxAge: AUTH_COOKIE_MAX_AGE_SECONDS,
 };
+
+export function authCookieOptionsForDays(days: number) {
+  const clampedDays = Math.max(1, Math.min(30, Math.floor(days)));
+  return {
+    ...authCookieOptions,
+    maxAge: 60 * 60 * 24 * clampedDays,
+  };
+}

@@ -1,10 +1,8 @@
 import { fileURLToPath } from "node:url";
 import bundleAnalyzer from "@next/bundle-analyzer";
 
-const staffPrefix = (process.env.NEXT_PUBLIC_OCC_STAFF_PREFIX || "/k9xm2p7qv4nw8-stf").replace(
-  /\/$/,
-  "",
-);
+// Keep this in sync with middleware matcher to avoid auth bypass from prefix drift.
+const staffPrefix = "/k9xm2p7qv4nw8-stf";
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
@@ -98,8 +96,9 @@ const nextConfig = {
       ...(config.resolve.alias ?? {}),
       "react-router": fileURLToPath(new URL("./src/lib/router-compat.tsx", import.meta.url)),
     };
-    // Windows dev: avoid intermittent ENOENT on .next/cache/webpack pack rename (PackFileCacheStrategy).
-    if (dev && process.platform === "win32") {
+    // Windows: memory webpack cache can break dev (404 on main-app.js / layout.css). Opt in only if needed:
+    //   set OCC_NEXT_WEBPACK_MEMORY_CACHE=true
+    if (dev && process.platform === "win32" && process.env.OCC_NEXT_WEBPACK_MEMORY_CACHE === "true") {
       config.cache = { type: "memory" };
     }
     return config;

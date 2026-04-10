@@ -54,7 +54,7 @@ export function Experiences({ theme }: { theme: "dark" | "light" }) {
           >
             <div className="pointer-events-none absolute inset-0 z-20 rounded-[2rem] border-[12px] border-black shadow-inner md:border-[20px] lg:border-[24px]" />
             <img
-              src="https://images.unsplash.com/photo-1583607309147-63470483c6e9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhc3Ryb25hdXQlMjBmbG9hdGluZyUyMGluJTIwc3BhY2UlMjBlYXJ0aCUyMHRhYmxldHxlbnwxfHx8fDE3NzQ5MzQ0ODR8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
+              src="/IMG_20260409_121007.jpg.jpeg"
               alt="Immersive OCC experience visual"
               className="z-10 h-full w-full object-cover"
             />

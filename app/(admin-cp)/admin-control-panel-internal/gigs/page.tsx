@@ -14,12 +14,30 @@ export default async function AdminCPGigsPage() {
     prisma.club.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
 
+  const applicationIds = gigs.flatMap((g) => g.applications.map((a) => a.id));
+  const verifiedRows =
+    applicationIds.length > 0
+      ? await prisma.auditLog.findMany({
+          where: {
+            action: "VERIFY_GIG_SUBMISSION",
+            entity: "gig_application",
+            entityId: { in: applicationIds },
+          },
+          select: { entityId: true },
+        })
+      : [];
+  const verifiedSet = new Set(verifiedRows.map((r) => r.entityId).filter(Boolean) as string[]);
+
   return (
     <GigsCRUD
       gigs={gigs.map((g) => ({
         ...g, createdAt: g.createdAt.toISOString(),
         deadline: g.deadline?.toISOString() || null,
-        applications: g.applications.map((a) => ({ ...a, createdAt: a.createdAt.toISOString() })),
+        applications: g.applications.map((a) => ({
+          ...a,
+          submissionVerified: verifiedSet.has(a.id),
+          createdAt: a.createdAt.toISOString(),
+        })),
       }))}
       clubs={clubs}
     />

@@ -14,11 +14,9 @@ export async function PATCH(
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (user.role !== "CLUB_HEADER" || user.approvalStatus !== "APPROVED" || !user.clubManaged) {
+  if (user.role !== "CLUB_HEADER" || user.approvalStatus !== "APPROVED") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-
-  const club = user.clubManaged;
 
   const { id } = await ctx.params;
   const body = await req.json();
@@ -38,8 +36,8 @@ export async function PATCH(
 
   const gig = application.gig;
   const owns =
-    gig.clubId === club.id ||
-    gig.postedById === user.id;
+    gig.postedById === user.id ||
+    (!!user.clubManaged?.id && gig.clubId === user.clubManaged.id);
   if (!owns) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -62,6 +60,7 @@ export async function PATCH(
     gigId: gig.id,
     applicationId: id,
     status: nextStatus,
+    userId: application.userId,
   });
 
   const verb = nextStatus === "APPROVED" ? "approved" : "declined";

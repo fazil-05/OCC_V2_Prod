@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { gigWhereNotLegacyDummy } from "@/lib/legacyDummyGigs";
@@ -7,10 +6,19 @@ import { ClubHeaderGigsClient } from "@/components/club-header/ClubHeaderGigsCli
 export default async function HeaderGigsPage() {
   const user = await requireUser();
   const club = user.clubManaged;
-  if (!club) redirect("/header/dashboard");
 
   const gigs = await prisma.gig.findMany({
-    where: { AND: [{ clubId: club.id }, { ...gigWhereNotLegacyDummy }] },
+    where: {
+      AND: [
+        {
+          OR: [
+            ...(club?.id ? [{ clubId: club.id }] : []),
+            { postedById: user.id },
+          ],
+        },
+        { ...gigWhereNotLegacyDummy },
+      ],
+    },
     orderBy: { createdAt: "desc" },
     include: {
       applications: {
@@ -31,6 +39,20 @@ export default async function HeaderGigsPage() {
     },
   });
 
+  const applicationIds = gigs.flatMap((g) => g.applications.map((a) => a.id));
+  const verifiedRows =
+    applicationIds.length > 0
+      ? await prisma.auditLog.findMany({
+          where: {
+            action: "VERIFY_GIG_SUBMISSION",
+            entity: "gig_application",
+            entityId: { in: applicationIds },
+          },
+          select: { entityId: true },
+        })
+      : [];
+  const verifiedSet = new Set(verifiedRows.map((r) => r.entityId).filter(Boolean) as string[]);
+
   const serialized = gigs.map((g) => ({
     id: g.id,
     title: g.title,
@@ -42,6 +64,7 @@ export default async function HeaderGigsPage() {
     applications: g.applications.map((a) => ({
       id: a.id,
       status: a.status,
+      submissionVerified: verifiedSet.has(a.id),
       message: a.message,
       workDescription: a.workDescription,
       submissionFileUrl: a.submissionFileUrl,

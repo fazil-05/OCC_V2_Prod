@@ -47,6 +47,7 @@ model User {
   gigsPosted             Gig[]               @relation("GigsPosted")
   notifications          Notification[]
   postLikes              PostLike[]
+  postBookmarks          PostBookmark[]
   posts                  Post[]
   referralStatsAsHeader  ReferralStat[]      @relation("ReferralHeader")
   referralStatsAsStudent ReferralStat[]      @relation("ReferralStudent")
@@ -69,6 +70,8 @@ model Club {
   theme                 String
   coverImage            String?
   memberCount           Int              @default(0)
+  /// Shown member total uses this base (100–799) + real `memberCount` (joins). Set at club creation; null = legacy deterministic seed.
+  memberDisplayBase     Int?
   createdAt             DateTime         @default(now())
   headerId              String?          @unique
   postingFrozen         Boolean          @default(false)
@@ -142,9 +145,10 @@ model Post {
   type        String     @default("post")
   hidden      Boolean    @default(false)
   pinned      Boolean    @default(false)
-  comments    Comment[]
-  postLikes   PostLike[]
-  club        Club       @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  comments      Comment[]
+  postLikes     PostLike[]
+  postBookmarks PostBookmark[]
+  club          Club       @relation(fields: [clubId], references: [id], onDelete: Cascade)
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   shares      Share[]
 
@@ -161,6 +165,18 @@ model PostLike {
 
   @@unique([postId, userId])
   @@map("post_likes")
+}
+
+model PostBookmark {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@map("post_bookmarks")
 }
 
 model Comment {

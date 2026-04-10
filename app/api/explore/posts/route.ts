@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { displayPostLikes } from "@/lib/socialDisplay";
+import { displayClubMembers, displayPostLikes, formatSocialCount } from "@/lib/socialDisplay";
 
 const MAX_LIMIT = 50;
 const DEFAULT_LIMIT = 30;
@@ -58,7 +58,15 @@ export async function GET(req: NextRequest) {
         select: { id: true, fullName: true, avatar: true, role: true },
       },
       club: {
-        select: { id: true, name: true, slug: true, icon: true, coverImage: true },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          icon: true,
+          coverImage: true,
+          memberCount: true,
+          memberDisplayBase: true,
+        },
       },
     },
   });
@@ -86,7 +94,18 @@ export async function GET(req: NextRequest) {
         role: p.user.role,
       },
       club: p.club
-        ? { id: p.club.id, name: p.club.name, slug: p.club.slug, icon: p.club.icon, coverImage: p.club.coverImage }
+        ? {
+            id: p.club.id,
+            name: p.club.name,
+            slug: p.club.slug,
+            icon: p.club.icon,
+            coverImage: p.club.coverImage,
+            memberCount: p.club.memberCount,
+            memberDisplayBase: p.club.memberDisplayBase,
+            clubMembersLabel: `${formatSocialCount(
+              displayClubMembers(p.club.id, p.club.memberCount ?? 0, p.club.memberDisplayBase),
+            )} Members`,
+          }
         : null,
     })),
     nextCursor,

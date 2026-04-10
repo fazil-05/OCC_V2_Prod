@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { generateReferralCode } from "@/lib/referral";
 import { pusherServer } from "@/lib/pusher";
 import { checkAdminMutationRateLimit } from "@/lib/admin-rate-limit";
+import { logAudit } from "@/lib/audit";
 
 export async function PATCH(_req: NextRequest, { params }: { params: { id: string } }) {
   const admin = await requireAdminPermission("approvals", "approve");
@@ -94,6 +95,18 @@ export async function PATCH(_req: NextRequest, { params }: { params: { id: strin
   } catch (pusherErr) {
     console.warn("[admin/approve] Pusher notification failed (non-critical):", pusherErr);
   }
+
+  const forwarded = _req.headers.get("x-forwarded-for") || "";
+  const ip = forwarded.split(",")[0]?.trim() || "unknown";
+  await logAudit({
+    adminId: admin.id,
+    adminEmail: admin.email,
+    action: "APPROVE_HEADER",
+    entity: "user",
+    entityId: target.id,
+    details: { referralCode: code, clubId: club.id },
+    ipAddress: ip,
+  });
 
   return NextResponse.json({ success: true, referralCode: code });
 }

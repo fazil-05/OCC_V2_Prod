@@ -3,9 +3,9 @@
 import * as React from "react";
 import { ApplyGigButton } from "@/components/dashboard/ApplyGigButton";
 import { EventCard } from "@/components/dashboard/EventCard";
-import { FeedCard } from "@/components/dashboard/FeedCard";
 import { GigCard } from "@/components/dashboard/GigCard";
 import { RegisterEventButton } from "@/components/dashboard/RegisterEventButton";
+import { OCCPostCard, type OCCPost } from "@/components/occ-dashboard/OCCPostCard";
 import { cn } from "@/app/components/ui/utils";
 import { motion } from "framer-motion";
 
@@ -13,15 +13,8 @@ const tabs = ["Feed", "Events", "Gigs"] as const;
 type TabKey = (typeof tabs)[number];
 
 type ClubTabsProps = {
-  posts: Array<{
-    id: string;
-    imageUrl: string;
-    imageUrls?: string[];
-    caption?: string | null;
-    likes: number;
-    club: { name: string; icon: string };
-    user: { fullName: string };
-  }>;
+  posts: OCCPost[];
+  currentUserId: string;
   events: Array<{
     id: string;
     title: string;
@@ -44,7 +37,7 @@ type ClubTabsProps = {
   }>;
 };
 
-export function ClubTabs({ posts, events, gigs }: ClubTabsProps) {
+export function ClubTabs({ posts, events, gigs, currentUserId }: ClubTabsProps) {
   const [active, setActive] = React.useState<TabKey>("Feed");
 
   return (
@@ -75,9 +68,9 @@ export function ClubTabs({ posts, events, gigs }: ClubTabsProps) {
 
       <div className="pt-8">
         {active === "Feed" ? (
-          <div className="flex flex-col gap-8 max-w-4xl mx-auto">
+          <div className="mx-auto flex w-full max-w-[min(100%,920px)] flex-col gap-6 sm:gap-8">
             {posts.map((post) => (
-              <FeedCard key={post.id} post={post} />
+              <OCCPostCard key={post.id} post={post} currentUserId={currentUserId} />
             ))}
           </div>
         ) : null}

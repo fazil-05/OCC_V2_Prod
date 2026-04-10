@@ -8,6 +8,19 @@ import { gigWhereNotLegacyDummy } from "@/lib/legacyDummyGigs";
 import { displayClubMembers, displayPostLikes, formatSocialCount } from "@/lib/socialDisplay";
 import { resolveClubAvatar, resolvePostImageUrlForFeed } from "@/lib/postImageUrl";
 
+function getTimeAgo(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+  const weeks = Math.floor(days / 7);
+  return `${weeks}w`;
+}
+
 const CINEMATIC_SLUGS: Record<string, { route: string; label: string; gradient: string }> = {
   bikers:      { route: "/bikers",      label: "Bikers Ride",    gradient: "from-amber-900/40 via-[#0C0C0A] to-orange-950/30" },
   sports:      { route: "/football",    label: "Football Club",  gradient: "from-green-900/40 via-[#060606] to-emerald-950/30" },
@@ -44,6 +57,7 @@ export default async function ClubDetailPage({
         include: {
           club: true,
           user: true,
+          _count: { select: { comments: true } },
         },
         orderBy: { createdAt: "desc" },
       },
@@ -77,6 +91,10 @@ export default async function ClubDetailPage({
     orderBy: { createdAt: "desc" },
     take: 8,
   });
+
+  const clubMembersLabel = `${formatSocialCount(
+    displayClubMembers(club.id, club.memberCount || club.members.length, club.memberDisplayBase),
+  )} Members`;
 
   const INDIAN_PROFILE_PICS = [
     "https://images.unsplash.com/photo-1507152832244-10d45c7eda57?w=100&q=80",
@@ -140,7 +158,9 @@ export default async function ClubDetailPage({
                 </div>
               ))}
               <span className="pl-6 text-[13px] font-bold text-slate-400">
-                {formatSocialCount(displayClubMembers(club.id, club.memberCount || club.members.length))}{" "}
+                {formatSocialCount(
+                  displayClubMembers(club.id, club.memberCount || club.members.length, club.memberDisplayBase),
+                )}{" "}
                 members active
               </span>
             </div>
@@ -150,6 +170,7 @@ export default async function ClubDetailPage({
       </section>
 
       <ClubTabs
+        currentUserId={user.id}
         posts={club.posts.map((p) => {
           const avatar = p.user.avatar || INDIAN_PROFILE_PICS[Math.floor(Math.random() * INDIAN_PROFILE_PICS.length)];
           const postImg = resolvePostImageUrlForFeed(p.imageUrl, club.name);
@@ -159,19 +180,19 @@ export default async function ClubDetailPage({
               : [postImg];
           return {
             id: p.id,
+            username: p.user.fullName,
+            userAvatarUrl: resolveClubAvatar(avatar, club.name),
+            timestamp: getTimeAgo(p.createdAt),
+            caption: p.caption || "",
+            content: p.content || "",
             imageUrl: postImg,
             imageUrls: postImgs,
-            caption: p.caption || p.content || "",
-            likes: displayPostLikes(p.id, p.likesCount ?? p.likes ?? 1240),
-            createdAt: p.createdAt.toISOString(),
-            club: {
-              name: club.name,
-              icon: club.icon,
-            },
-            user: {
-              fullName: p.user.fullName,
-              avatar: avatar,
-            }
+            likeCount: displayPostLikes(p.id, p.likesCount ?? p.likes ?? 0),
+            sharesCount: p.sharesCount ?? 0,
+            clubId: club.id,
+            clubName: club.name,
+            clubMembersLabel,
+            commentsCount: p._count.comments,
           };
         })}
         events={club.events.map((event) => ({

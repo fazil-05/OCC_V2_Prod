@@ -2,12 +2,31 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher";
+import { notifyPostCommented } from "@/lib/post-engagement-notify";
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+/** Public comment payload — never include email, phone, or other PII (same for all roles). */
+function publicCommentPayload(c: {
+  id: string;
+  content: string;
+  createdAt: Date;
+  user: { id: string; fullName: string; avatar: string | null };
+}) {
+  return {
+    id: c.id,
+    content: c.content,
+    createdAt: c.createdAt,
+    user: {
+      id: c.user.id,
+      fullName: c.user.fullName,
+      avatar: c.user.avatar,
+    },
+  };
+}
+
+export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Get comments with user details
   const comments = await prisma.comment.findMany({
     where: { postId: params.id },
     include: {
@@ -16,38 +35,13 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           id: true,
           fullName: true,
           avatar: true,
-          email: true, // Only for Admin/ClubHeader
-          phoneNumber: true, // Only for Admin/ClubHeader
-          role: true
-        }
-      }
+        },
+      },
     },
-    orderBy: { createdAt: "asc" }
+    orderBy: { createdAt: "asc" },
   });
 
-  // Check if viewer is Admin or the Club Header of this post's club
-  const post = await prisma.post.findUnique({
-    where: { id: params.id },
-    include: { club: true }
-  });
-
-  const isPrivileged = user.role === "ADMIN" || (user.role === "CLUB_HEADER" && post?.club.headerId === user.id);
-
-  const sanitizedComments = comments.map(c => ({
-    id: c.id,
-    content: c.content,
-    createdAt: c.createdAt,
-    user: {
-      id: c.user.id,
-      fullName: c.user.fullName,
-      avatar: c.user.avatar,
-      // PRIVACY GATE: Name+Email+Phone only for privileged viewers
-      email: isPrivileged ? c.user.email : null,
-      phoneNumber: isPrivileged ? c.user.phoneNumber : null
-    }
-  }));
-
-  return NextResponse.json(sanitizedComments);
+  return NextResponse.json(comments.map(publicCommentPayload));
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -59,10 +53,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!content) return NextResponse.json({ error: "Content required" }, { status: 400 });
 
   const comment = await prisma.comment.create({
-    data: { 
-      postId: params.id, 
-      userId: user.id, 
-      content 
+    data: {
+      postId: params.id,
+      userId: user.id,
+      content,
     },
     include: {
       user: {
@@ -70,40 +64,46 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           id: true,
           fullName: true,
           avatar: true,
-          email: true,
-          phoneNumber: true
-        }
-      }
-    }
+        },
+      },
+    },
   });
 
   const post = await prisma.post.findUnique({
     where: { id: params.id },
-    include: { club: true }
+    include: { club: { select: { id: true, headerId: true } } },
   });
   const commentsCount = await prisma.comment.count({
     where: { postId: params.id },
   });
 
-  if (pusherServer) {
+  const safeComment = publicCommentPayload(comment);
+
+  const preview =
+    content.length > 80 ? `${content.slice(0, 77)}…` : content;
+
+  try {
     await pusherServer.trigger(`club-${post?.clubId}`, "new-comment", {
       postId: params.id,
       commentsCount,
-      comment: {
-        id: comment.id,
-        content: comment.content,
-        createdAt: comment.createdAt,
-        user: {
-          id: comment.user.id,
-          fullName: comment.user.fullName,
-          avatar: comment.user.avatar,
-          // In real-time broadcast, we don't send private info unless it's a private channel,
-          // but for simplicity here we'll let the client-side list re-fetch or filter.
-          // Better: only send name/avatar in public broadcast.
-        }
-      }
+      comment: safeComment,
+    });
+  } catch (e) {
+    console.warn("[posts/comment] Pusher failed (non-critical):", e);
+  }
+
+  if (post?.clubId) {
+    void notifyPostCommented({
+      postId: params.id,
+      clubId: post.clubId,
+      headerId: post.club?.headerId ?? null,
+      commenterId: user.id,
+      commenterName: user.fullName,
+      caption: post.caption,
+      content: post.content,
+      commentPreview: preview,
     });
   }
 
-  return NextResponse.json({ success: true, comment, commentsCount }, { status: 201 });
+  return NextResponse.json({ success: true, comment: safeComment, commentsCount }, { status: 201 });
 }

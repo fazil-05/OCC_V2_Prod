@@ -12,6 +12,10 @@ const PROTECTED_PATHS = [
   "/notifications",
   "/e-clubs",
 ];
+
+function isSharedPostPath(pathname: string) {
+  return pathname === "/p" || pathname.startsWith("/p/");
+}
 const AUTH_PATHS = ["/login", "/register", "/club-header/login", "/club-header/register"];
 
 function isStaffGatePath(pathname: string) {
@@ -64,10 +68,41 @@ function isAdminApiPath(pathname: string) {
   );
 }
 
+function isClubHeaderApiPath(pathname: string) {
+  return pathname === "/api/club-header" || pathname.startsWith("/api/club-header/");
+}
+
+function isMutationMethod(method: string) {
+  return method === "POST" || method === "PATCH" || method === "PUT" || method === "DELETE";
+}
+
+function originMatchesRequestHost(req: NextRequest): boolean {
+  const origin = req.headers.get("origin");
+  if (!origin) return false;
+  let originHost = "";
+  try {
+    originHost = new URL(origin).host;
+  } catch {
+    return false;
+  }
+  const requestHost = req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
+  return originHost.toLowerCase() === requestHost.toLowerCase();
+}
+
 export async function middleware(req: NextRequest) {
   const token = req.cookies.get("occ-token")?.value;
   const { pathname, search } = req.nextUrl;
   const reauthRequested = req.nextUrl.searchParams.get("reauth") === "1";
+
+  // Strict CSRF guard for privileged mutation APIs.
+  if (
+    isMutationMethod(req.method) &&
+    (isAdminApiPath(pathname) || isClubHeaderApiPath(pathname))
+  ) {
+    if (!originMatchesRequestHost(req)) {
+      return NextResponse.json({ error: "Forbidden (CSRF)" }, { status: 403 });
+    }
+  }
 
   if (isLegacyAdminPath(pathname) || isInternalStaffPath(pathname)) {
     return new NextResponse(null, { status: 404 });
@@ -89,7 +124,8 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  const isProtected = PROTECTED_PATHS.some((path) => pathname.startsWith(path));
+  const isProtected =
+    PROTECTED_PATHS.some((path) => pathname.startsWith(path)) || isSharedPostPath(pathname);
   const isAuthPath = AUTH_PATHS.some((path) => pathname.startsWith(path));
   const isStaffPanel = isStaffPanelPath(pathname);
   const isAdminCP = isAdminCPPath(pathname);

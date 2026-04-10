@@ -90,17 +90,32 @@ export const eventRegistrationSchema = z.object({
   eventId: z.string().cuid(),
 });
 
+/** Phase 1 only: pitch + contact. Work/files belong to POST /api/gig-applications/submit after approval. */
 export const gigApplicationSchema = z.object({
   gigId: z.string().cuid(),
-  message: z.string().max(2000).optional().or(z.literal("")),
-  workDescription: z.string().max(5000).optional().or(z.literal("")),
-  submissionFileUrl: z.string().max(2048).optional(),
-  submissionFileName: z.string().max(260).optional(),
-  submissionFileMime: z.string().max(120).optional(),
-  submissionFileSize: z.number().int().min(1).max(30 * 1024 * 1024).optional(),
+  message: z.string().max(50).optional().or(z.literal("")),
   applicantName: z.string().min(2).max(120).optional(),
   applicantPhone: z.string().min(10).max(20).optional(),
   applicantEmail: z.string().email().max(200).optional(),
+});
+
+const httpsSubmissionUrl = z
+  .string()
+  .max(2048)
+  .url("submissionFileUrl must be a valid URL")
+  .refine((v) => /^https:\/\//i.test(v), "submissionFileUrl must use https");
+
+/** Phase 2: after club header/admin APPROVED — deliverables only. */
+export const gigApplicationSubmitSchema = z.object({
+  gigId: z.string().cuid(),
+  workDescription: z
+    .string()
+    .min(10, "Describe your work or plan (at least 10 characters)")
+    .max(5000),
+  submissionFileUrl: z.union([httpsSubmissionUrl, z.literal("")]).optional(),
+  submissionFileName: z.string().max(260).optional().or(z.literal("")),
+  submissionFileMime: z.string().max(120).optional().or(z.literal("")),
+  submissionFileSize: z.number().int().min(1).max(30 * 1024 * 1024).optional(),
 });
 
 export const gigCreateSchema = z.object({

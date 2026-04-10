@@ -58,21 +58,20 @@ export async function POST(req: NextRequest) {
   });
   if (existing?.status === "APPROVED") {
     return NextResponse.json(
-      { error: "You are already approved for this gig" },
+      {
+        error:
+          "You're approved for this gig. Submit your project from the gig card (E-Clubs) or deliverables step — not here.",
+      },
       { status: 400 },
     );
   }
 
   const msg = parsed.message?.trim() || null;
-  const workDescription = parsed.workDescription?.trim() || null;
-  const submissionFileUrl = parsed.submissionFileUrl?.trim() || null;
-  const submissionFileName = parsed.submissionFileName?.trim() || null;
-  const submissionFileMime = parsed.submissionFileMime?.trim() || null;
-  const submissionFileSize = parsed.submissionFileSize ?? null;
   const applicantName = parsed.applicantName?.trim() || user.fullName;
   const applicantPhone = parsed.applicantPhone?.trim() || user.phoneNumber;
   const applicantEmail = parsed.applicantEmail?.trim() || user.email;
 
+  /** Apply phase only: no deliverables until after approval (freelance-style). */
   const application = await prisma.gigApplication.upsert({
     where: {
       userId_gigId: {
@@ -82,25 +81,20 @@ export async function POST(req: NextRequest) {
     },
     update: {
       message: msg,
-      workDescription,
-      submissionFileUrl,
-      submissionFileName,
-      submissionFileMime,
-      submissionFileSize,
       status: "PENDING",
       applicantName,
       applicantPhone,
       applicantEmail,
+      workDescription: null,
+      submissionFileUrl: null,
+      submissionFileName: null,
+      submissionFileMime: null,
+      submissionFileSize: null,
     },
     create: {
       userId: user.id,
       gigId,
       message: msg,
-      workDescription,
-      submissionFileUrl,
-      submissionFileName,
-      submissionFileMime,
-      submissionFileSize,
       status: "PENDING",
       applicantName,
       applicantPhone,
@@ -113,6 +107,7 @@ export async function POST(req: NextRequest) {
     type: "gig-application",
     gigId,
     applicationId: application.id,
+    userId: user.id,
   });
 
   const headerId = gig.postedById ?? gig.club?.headerId ?? null;

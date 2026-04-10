@@ -1,7 +1,10 @@
+import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ClubCard } from "@/components/dashboard/ClubCard";
-import { Search, MapPin, Sparkles, Filter, LayoutGrid, List } from "lucide-react";
+import { ClubsHubControls } from "@/components/dashboard/ClubsHubControls";
+import { clubHubWhere } from "@/lib/clubCategoryFilter";
+import { Sparkles } from "lucide-react";
 
 // NEW PREMIUM ASSETS
 const PREMIUM_ASSETS: Record<string, string> = {
@@ -11,21 +14,19 @@ const PREMIUM_ASSETS: Record<string, string> = {
   "Photography": "/premium-assets/club_photography_premium_169_1775157399055.png"
 };
 
-export default async function ClubsPage({ searchParams }: { searchParams: { q?: string } }) {
-  const user = await requireUser();
-  const query = searchParams.q || "";
+export default async function ClubsPage({
+  searchParams,
+}: {
+  searchParams: { q?: string; cat?: string };
+}) {
+  await requireUser();
+
+  const where = clubHubWhere(searchParams.cat, searchParams.q);
 
   const clubsFromDb = await prisma.club.findMany({
-    where: {
-      OR: [
-        { name: { contains: query, mode: 'insensitive' } },
-        { description: { contains: query, mode: 'insensitive' } }
-      ]
-    },
-    orderBy: { createdAt: 'desc' },
+    where,
+    orderBy: { createdAt: "desc" },
   });
-
-  const categories = ["All Clubs", "Elite Sports", "Global Music", "Art & Design", "Technology", "Fashion Explorer"];
 
   return (
     <div className="min-h-screen bg-[#F6F7FA]">
@@ -58,39 +59,17 @@ export default async function ClubsPage({ searchParams }: { searchParams: { q?: 
       </section>
 
       {/* FILTER & CONTROL CENTER */}
-      <div className="max-w-[1400px] mx-auto px-0 sm:px-4 mb-8 sm:mb-12">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 sm:gap-8 mb-6 sm:mb-10 pb-6 sm:pb-10 border-b border-black/[0.05]">
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide px-4 sm:px-0">
-            {categories.map((cat, i) => (
-              <button
-                key={cat}
-                className={`px-5 sm:px-8 py-2.5 sm:py-3.5 rounded-full text-[11px] sm:text-[13px] font-black tracking-wide uppercase transition-all duration-300 shadow-sm border shrink-0 ${i === 0
-                  ? "bg-black text-white border-black shadow-xl"
-                  : "bg-white text-black/40 border-black/5 hover:border-black/20"
-                  }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-2 px-4 sm:px-0 w-full lg:w-auto">
-            <div className="relative group flex-1 lg:flex-none">
-              <input
-                type="text"
-                placeholder="Search clubs..."
-                className="h-12 sm:h-14 w-full lg:w-80 rounded-xl sm:rounded-2xl bg-white border border-black/5 pl-10 sm:pl-14 pr-6 text-[13px] sm:text-[14px] font-bold text-black placeholder:text-black/20 outline-none transition-all shadow-sm"
-              />
-              <Search className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-black/20 transition-all" strokeWidth={3} />
-            </div>
-            <button className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 flex items-center justify-center bg-white rounded-xl sm:rounded-2xl border border-black/5 shadow-sm text-black/40">
-              <Filter className="h-4 w-4 sm:h-5 sm:w-5" />
-            </button>
-          </div>
-        </div>
+      <div className="mx-auto mb-8 max-w-[1400px] px-0 sm:mb-12 sm:px-4">
+        <Suspense
+          fallback={
+            <div className="mb-10 h-28 animate-pulse rounded-2xl bg-black/[0.04] px-4 sm:px-0" />
+          }
+        >
+          <ClubsHubControls />
+        </Suspense>
 
         {/* CLUBS GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-8 pb-20 px-4 sm:px-0">
+        <div className="grid grid-cols-1 gap-4 pb-20 sm:gap-8 md:grid-cols-2 xl:grid-cols-3 px-4 sm:px-0">
           {clubsFromDb.map((club) => {
             let clubImg = club.coverImage || "";
             const cn = club.name;

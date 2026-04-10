@@ -263,11 +263,14 @@ function OpenMicExperienceSection() {
                   </p>
                 </div>
                 
-                <div className="mt-8 pt-6 border-t border-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                  <button className="text-[10px] font-bold uppercase tracking-[0.2em] text-violet-400 flex items-center gap-3">
+                <div className="mt-8 border-t border-white/5 pt-6 opacity-100 transition-opacity duration-500 md:opacity-0 md:group-hover:opacity-100">
+                  <Link
+                    to="/login"
+                    className="inline-flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-violet-400 hover:text-violet-300"
+                  >
                     Explore Details
                     <span className="h-px w-8 bg-violet-400/50" />
-                  </button>
+                  </Link>
                 </div>
               </div>
 

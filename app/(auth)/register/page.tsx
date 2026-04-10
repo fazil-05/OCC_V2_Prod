@@ -231,6 +231,16 @@ function RegisterPageInner() {
         transition={{ duration: 0.6 }}
         className="w-full lg:w-1/2 flex flex-col justify-center px-8 md:px-16 lg:px-24 bg-white"
       >
+        <div className="mb-6">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900"
+          >
+            <span aria-hidden>←</span>
+            Back to landing
+          </Link>
+        </div>
+
         {/* Logo */}
         <div className="mb-12">
           <h1 className="text-4xl font-black tracking-tight text-gray-900 flex items-center">

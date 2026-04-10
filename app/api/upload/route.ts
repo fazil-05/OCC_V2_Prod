@@ -4,7 +4,7 @@ import { mkdir, writeFile } from "fs/promises";
 import { join } from "path";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
-import { isCloudinaryConfigured, uploadImageBuffer } from "@/lib/cloudinary";
+import { isCloudinaryConfigured, uploadBuffer } from "@/lib/cloudinary";
 
 async function saveToLocalDisk(userId: string, ext: string, bytes: Buffer): Promise<string> {
   const shortName = `${randomUUID()}.${ext}`;
@@ -82,10 +82,11 @@ export async function POST(req: NextRequest) {
   // 1) Cloudinary (recommended for production)
   if (isCloudinaryConfigured()) {
     try {
-      const url = await uploadImageBuffer({
+      const url = await uploadBuffer({
         buffer: bytes,
         folder,
         contentType: file.type || "application/octet-stream",
+        resourceType: isGigSubmission ? "raw" : "image",
       });
       return NextResponse.json({ success: true, url });
     } catch (e) {

@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { postCreateSchema } from "@/lib/validations";
 import { pusherServer } from "@/lib/pusher";
+import { logPrivilegedMutation } from "@/lib/mutation-audit";
 
 export async function POST(req: NextRequest) {
   const user = await getSessionUser();
@@ -73,5 +74,17 @@ export async function POST(req: NextRequest) {
   });
 
   await pusherServer.trigger(`club-${clubId}`, "new-post", { post });
+  const forwarded = req.headers.get("x-forwarded-for") || "";
+  const ip = forwarded.split(",")[0]?.trim() || "unknown";
+  await logPrivilegedMutation({
+    actor: { id: user.id, email: user.email, role: "CLUB_HEADER" },
+    method: req.method,
+    path: "/api/club-header/post",
+    module: "club-header",
+    action: "create-post",
+    entity: "post",
+    entityId: post.id,
+    ipAddress: ip,
+  });
   return NextResponse.json({ success: true, post }, { status: 201 });
 }

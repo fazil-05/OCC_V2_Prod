@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { ensureOccDefaultClubs } from "@/lib/occDefaultClubs";
 import { pusherServer } from "@/lib/pusher";
 import { clubHeaderRegisterSchema } from "@/lib/validations";
+import { logPrivilegedMutation } from "@/lib/mutation-audit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -51,6 +52,8 @@ export async function POST(req: NextRequest) {
         phoneNumber: payload.phoneNumber,
         collegeName: payload.collegeName,
         password: passwordHash,
+        // Club-header login has no OTP flow by product decision; mark verified at creation.
+        emailVerified: new Date(),
         role: "CLUB_HEADER",
         approvalStatus: "PENDING",
         bio: payload.experience,
@@ -72,6 +75,19 @@ export async function POST(req: NextRequest) {
     } catch (pusherErr) {
       console.warn("[club-header/register] Pusher notification failed (non-critical):", pusherErr);
     }
+    const forwarded = req.headers.get("x-forwarded-for") || "";
+    const ip = forwarded.split(",")[0]?.trim() || "unknown";
+    await logPrivilegedMutation({
+      actor: { id: user.id, email: user.email, role: "CLUB_HEADER" },
+      method: req.method,
+      path: "/api/club-header/register",
+      module: "club-header",
+      action: "apply",
+      entity: "user",
+      entityId: user.id,
+      details: { approvalStatus: "PENDING", clubSlug: payload.clubSlug },
+      ipAddress: ip,
+    });
 
     return NextResponse.json({ success: true, userId: user.id }, { status: 201 });
   } catch (error) {

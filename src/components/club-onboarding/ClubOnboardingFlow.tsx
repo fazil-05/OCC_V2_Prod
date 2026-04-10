@@ -172,20 +172,20 @@ export function ClubOnboardingFlow({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -18 }}
                 transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-                className="w-full max-w-3xl rounded-[2rem] border border-white/10 bg-white/[0.04] px-5 py-8 shadow-[0_35px_120px_rgba(0,0,0,0.35)] backdrop-blur-2xl sm:px-8 sm:py-10 md:px-10"
+                className="w-full max-w-md overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-5 shadow-[0_35px_120px_rgba(0,0,0,0.35)] backdrop-blur-2xl sm:max-w-lg sm:rounded-[1.75rem] sm:px-6 sm:py-6 max-h-[min(82dvh,640px)]"
                 style={{ boxShadow: "0 25px 80px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)" }}
               >
-                <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-white/35">
+                <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/35 sm:text-[11px]">
                   Step {activeIndex + 1}
                 </p>
-                <h1 className="mt-4 text-[clamp(2.2rem,5vw,4.5rem)] font-black uppercase leading-[0.92] tracking-[0.02em] text-[#F7F4EF]">
+                <h1 className="mt-2 text-[clamp(1.15rem,4.2vw,1.65rem)] font-black uppercase leading-tight tracking-[0.02em] text-[#F7F4EF] sm:mt-3 sm:text-[clamp(1.2rem,3.2vw,1.85rem)]">
                   {activePrompt}
                 </h1>
-                <p className="mt-4 max-w-xl text-[14px] leading-relaxed text-white/45 sm:text-[15px]">
+                <p className="mt-2 max-w-xl text-[12px] leading-snug text-white/45 sm:mt-3 sm:text-[13px]">
                   Pick the one that feels closest. We’ll tune the vibe around it.
                 </p>
 
-                <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                <div className="mt-4 grid grid-cols-1 gap-2 sm:mt-5 sm:grid-cols-2 sm:gap-2.5">
                   {currentQuestion.options.map((option) => {
                     const isSelected = selectedOption === option;
 
@@ -199,7 +199,7 @@ export function ClubOnboardingFlow({
                         whileHover={{ y: -2 }}
                         whileTap={{ scale: 0.98 }}
                         transition={optionSpring}
-                        className={`group rounded-[1.5rem] border px-4 py-5 text-left transition-all ${
+                        className={`group rounded-xl border px-3 py-3 text-left transition-all sm:rounded-2xl sm:px-3.5 sm:py-3.5 ${
                           isSelected
                             ? config.slug === "music"
                               ? "border-[#8B5CF6]/80 bg-[#8B5CF6]/18 shadow-[0_0_30px_rgba(139,92,246,0.16)]"
@@ -207,10 +207,10 @@ export function ClubOnboardingFlow({
                             : "border-white/10 bg-white/[0.03] hover:border-white/20"
                         }`}
                       >
-                        <span className="block text-[15px] font-medium text-[#F7F4EF] sm:text-[16px]">
+                        <span className="block text-[13px] font-medium leading-snug text-[#F7F4EF] sm:text-[14px]">
                           {option}
                         </span>
-                        <span className="mt-2 block text-[11px] uppercase tracking-[0.24em] text-white/28">
+                        <span className="mt-1 block text-[9px] uppercase tracking-[0.22em] text-white/28 sm:text-[10px]">
                           Tap to choose
                         </span>
                       </motion.button>

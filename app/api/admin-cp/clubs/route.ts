@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminPermission } from "@/lib/admin-api-guard";
 import { logAudit } from "@/lib/audit";
 import { z } from "zod";
+import { randomMemberDisplayBase } from "@/lib/socialDisplay";
 
 const createSchema = z.object({
   name: z.string().min(2).max(100),
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest) {
       theme: body.theme,
       coverImage: body.coverImage || null,
       headerId: body.headerId || null,
+      memberDisplayBase: randomMemberDisplayBase(),
     },
   });
 

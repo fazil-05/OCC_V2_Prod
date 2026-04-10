@@ -23,20 +23,26 @@ function configure(): void {
 }
 
 /**
- * Upload image bytes; returns `secure_url` for storing in DB.
+ * Upload bytes; returns `secure_url` for storing in DB.
  * Uses base64 upload (reliable on Windows vs stream + avoids common stream edge cases).
  */
-export async function uploadImageBuffer(opts: {
+export async function uploadBuffer(opts: {
   buffer: Buffer;
   folder: string;
   contentType?: string;
+  resourceType?: "image" | "raw";
 }): Promise<string> {
   if (!isCloudinaryConfigured()) {
     throw new Error("Cloudinary is not configured");
   }
   configure();
+  const resourceType = opts.resourceType || "image";
   const mime =
-    opts.contentType && opts.contentType.startsWith("image/") ? opts.contentType : "image/jpeg";
+    resourceType === "raw"
+      ? opts.contentType || "application/octet-stream"
+      : opts.contentType && opts.contentType.startsWith("image/")
+        ? opts.contentType
+        : "image/jpeg";
   const dataUri = `data:${mime};base64,${opts.buffer.toString("base64")}`;
 
   return new Promise((resolve, reject) => {
@@ -44,7 +50,8 @@ export async function uploadImageBuffer(opts: {
       dataUri,
       {
         folder: opts.folder,
-        resource_type: "image",
+        resource_type: resourceType,
+        type: "upload",
         overwrite: false,
       },
       (error, result) => {
@@ -62,12 +69,25 @@ export async function uploadImageBuffer(opts: {
   });
 }
 
+/** Backward-compatible helper for image uploads. */
+export async function uploadImageBuffer(opts: {
+  buffer: Buffer;
+  folder: string;
+  contentType?: string;
+}): Promise<string> {
+  return uploadBuffer({ ...opts, resourceType: "image" });
+}
+
 /** Derive public_id from a Cloudinary delivery URL for delete API. */
 export function publicIdFromCloudinaryUrl(url: string): string | null {
   try {
     const u = new URL(url);
-    if (!u.hostname.includes("res.cloudinary.com")) return null;
+    if (u.protocol !== "https:") return null;
+    if (u.hostname !== "res.cloudinary.com") return null;
+    const expectedCloud = trimEnv(process.env.CLOUDINARY_CLOUD_NAME);
+    if (!expectedCloud) return null;
     const parts = u.pathname.split("/").filter(Boolean);
+    if (parts[0] !== expectedCloud) return null;
     const uploadIdx = parts.indexOf("upload");
     if (uploadIdx === -1 || uploadIdx >= parts.length - 1) return null;
     let rest = parts.slice(uploadIdx + 1);

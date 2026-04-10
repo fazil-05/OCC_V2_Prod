@@ -7,6 +7,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { pusherClient } from "@/lib/pusher";
 import { displayClubMembers, formatSocialCount } from "@/lib/socialDisplay";
+import { ECLUBS_PUSHER_CHANNEL, type EClubsPusherPayload } from "@/lib/gigs-realtime";
 
 export type OCCEventItem = {
   id: string;
@@ -30,12 +31,23 @@ export type OCCOpportunity = {
   title: string;
   description: string;
   brand: string;
+  /** PENDING | APPROVED | REJECTED when the signed-in user has applied */
+  applicationStatus?: string | null;
 };
+
+function gigApplicationStatusLabel(status: string | null | undefined): string | null {
+  if (!status) return null;
+  if (status === "PENDING") return "Pending review";
+  if (status === "APPROVED") return "Approved";
+  if (status === "REJECTED") return "Not selected";
+  return null;
+}
 
 interface OCCRightRailProps {
   events: OCCEventItem[];
   trending: OCCClubItem[];
   opportunities: OCCOpportunity[];
+  currentUserId: string;
 }
 
 const sectionVariants: any = {
@@ -47,13 +59,43 @@ const sectionVariants: any = {
   }
 };
 
-export function OCCRightRail({ events, trending, opportunities }: OCCRightRailProps) {
+export function OCCRightRail({ events, trending, opportunities, currentUserId }: OCCRightRailProps) {
   const [localTrending, setLocalTrending] = useState(trending);
   const [joiningId, setJoiningId] = useState<string | null>(null);
+  /** Live overrides from Pusher (apply / approve / reject) */
+  const [liveAppStatusByGig, setLiveAppStatusByGig] = useState<Record<string, string>>({});
+
+  const oppRealtimeKey = opportunities
+    .map((o) => `${o.id}:${o.applicationStatus ?? ""}`)
+    .sort()
+    .join("|");
+
+  useEffect(() => {
+    setLiveAppStatusByGig({});
+  }, [oppRealtimeKey]);
 
   useEffect(() => {
     setLocalTrending(trending);
   }, [trending]);
+
+  useEffect(() => {
+    if (!pusherClient || !currentUserId) return;
+    const ch = pusherClient.subscribe(ECLUBS_PUSHER_CHANNEL);
+    const onUpdate = (raw: unknown) => {
+      const data = raw as EClubsPusherPayload;
+      if (data.type === "gig-application" && data.userId === currentUserId) {
+        setLiveAppStatusByGig((prev) => ({ ...prev, [data.gigId]: "PENDING" }));
+      }
+      if (data.type === "gig-application-status" && data.userId === currentUserId) {
+        setLiveAppStatusByGig((prev) => ({ ...prev, [data.gigId]: data.status }));
+      }
+    };
+    ch.bind("update", onUpdate);
+    return () => {
+      ch.unbind("update", onUpdate);
+      pusherClient?.unsubscribe(ECLUBS_PUSHER_CHANNEL);
+    };
+  }, [currentUserId]);
 
   // REALTIME JOIN UPDATES
   useEffect(() => {
@@ -64,9 +106,15 @@ export function OCCRightRail({ events, trending, opportunities }: OCCRightRailPr
       if (channel) {
         channel.bind(
           "member-joined",
-          (data: { clubId: string; memberCount: number; displayMemberCount?: number }) => {
+          (data: {
+            clubId: string;
+            memberCount: number;
+            displayMemberCount?: number;
+            memberDisplayBase?: number | null;
+          }) => {
             const display =
-              data.displayMemberCount ?? displayClubMembers(data.clubId, data.memberCount);
+              data.displayMemberCount ??
+              displayClubMembers(data.clubId, data.memberCount, data.memberDisplayBase);
             setLocalTrending((prev) =>
               prev.map((c) =>
                 c.id === data.clubId ? { ...c, members: formatSocialCount(display) } : c,
@@ -211,14 +259,27 @@ export function OCCRightRail({ events, trending, opportunities }: OCCRightRailPr
             <h3 className="text-[17px] font-semibold tracking-tight text-black/90">Gigs & Labs</h3>
           </div>
           <Link
-            href="/gigs"
-            className="text-[11px] font-semibold text-[#D4AF37] hover:scale-105 transition-transform uppercase tracking-widest"
+            href="/e-clubs"
+            className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-[#D4AF37] hover:opacity-90 transition-opacity uppercase tracking-widest"
           >
             See all
+            <ChevronRight className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
           </Link>
         </div>
         <div className="flex flex-col gap-4">
-          {opportunities.map((opp) => (
+          {opportunities.map((opp) => {
+            const rawStatus = liveAppStatusByGig[opp.id] ?? opp.applicationStatus ?? null;
+            const statusLabel = gigApplicationStatusLabel(rawStatus);
+            const statusTone =
+              rawStatus === "APPROVED"
+                ? "border-emerald-500/25 bg-emerald-500/[0.06] text-emerald-800"
+                : rawStatus === "REJECTED"
+                  ? "border-black/10 bg-black/[0.04] text-black/45"
+                  : rawStatus === "PENDING"
+                    ? "border-amber-500/30 bg-amber-500/[0.08] text-amber-900"
+                    : "";
+
+            return (
             <motion.div 
               key={opp.id} 
               whileHover={{ y: -4 }}
@@ -230,9 +291,9 @@ export function OCCRightRail({ events, trending, opportunities }: OCCRightRailPr
                   <span className="text-[12px] font-semibold text-[#D4AF37] tracking-widest uppercase bg-[#D4AF37]/5 px-2.5 py-0.5 rounded-lg border border-[#D4AF37]/10 self-start">{opp.brand}</span>
                 </div>
                 <Link
-                  href={`/gigs/${opp.id}/apply`}
+                  href="/e-clubs"
                   className="rounded-md p-1 text-black/10 transition-colors hover:text-[#5227FF]"
-                  aria-label={`Open ${opp.title} application`}
+                  aria-label={`View ${opp.title} on E-Clubs`}
                 >
                   <ExternalLink className="h-4.5 w-4.5" />
                 </Link>
@@ -240,14 +301,23 @@ export function OCCRightRail({ events, trending, opportunities }: OCCRightRailPr
               <p className="text-[12px] font-medium text-black/30 leading-relaxed line-clamp-2 italic pr-2">
                 "{opp.description}"
               </p>
-              <Link
-                href={`/gigs/${opp.id}/apply`}
-                className="block w-full rounded-xl border border-black/5 bg-white py-3 text-center text-[12px] font-semibold text-black shadow-sm transition-all hover:bg-black hover:text-white"
-              >
-                Apply Now
-              </Link>
+              {statusLabel ? (
+                <div
+                  className={`block w-full rounded-xl border py-3 text-center text-[12px] font-semibold shadow-sm ${statusTone}`}
+                >
+                  {statusLabel}
+                </div>
+              ) : (
+                <Link
+                  href={`/gigs/${opp.id}/apply`}
+                  className="block w-full rounded-xl border border-black/5 bg-white py-3 text-center text-[12px] font-semibold text-black shadow-sm transition-all hover:bg-black hover:text-white"
+                >
+                  Apply Now
+                </Link>
+              )}
             </motion.div>
-          ))}
+            );
+          })}
         </div>
       </motion.section>
 

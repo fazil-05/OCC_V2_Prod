@@ -4,34 +4,21 @@ import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { Search, Shield, Ban, Key, Trash2, ChevronDown, UserCheck, UserX } from "lucide-react";
+import { Search, Ban, Key, Trash2, UserCheck } from "lucide-react";
 import { pusherClient } from "@/lib/pusher";
 
 type User = {
   id: string; fullName: string; email: string; phoneNumber: string; collegeName: string;
-  role: string; approvalStatus: string; suspended: boolean; adminLevel: string | null;
-  adminRoleTemplateId: string | null;
-  createdAt: string; referralCode: string | null; clubs: string[];
+  role: string; approvalStatus: string; suspended: boolean;
+  createdAt: string; updatedAt: string; referralCode: string | null; clubs: string[];
 };
-
-type RoleTpl = { id: string; name: string; slug: string };
 
 export function UsersCRUD({ users: initial }: { users: User[] }) {
   const router = useRouter();
   const [users, setUsers] = useState(initial);
-  const [roleTemplates, setRoleTemplates] = useState<RoleTpl[]>([]);
   const [q, setQ] = useState("");
   const [roleF, setRoleF] = useState("");
   const [statusF, setStatusF] = useState("");
-
-  useEffect(() => {
-    fetch("/api/admin-cp/roles")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.templates) setRoleTemplates(d.templates.map((t: { id: string; name: string; slug: string }) => ({ id: t.id, name: t.name, slug: t.slug })));
-      })
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     setUsers(initial);
@@ -72,21 +59,6 @@ export function UsersCRUD({ users: initial }: { users: User[] }) {
     if (r) setUsers((p) => p.map((x) => x.id === u.id ? { ...x, suspended: !x.suspended } : x));
   };
 
-  const changeRole = async (u: User, role: string) => {
-    const r = await action(u.id, { role }, `Role changed to ${role}`);
-    if (r) setUsers((p) => p.map((x) => (x.id === u.id ? { ...x, role } : x)));
-  };
-
-  const changeAdminLevel = async (u: User, adminLevel: string | null) => {
-    const r = await action(u.id, { adminLevel }, "Admin level updated");
-    if (r) setUsers((p) => p.map((x) => (x.id === u.id ? { ...x, adminLevel } : x)));
-  };
-
-  const changeAdminTemplate = async (u: User, adminRoleTemplateId: string | null) => {
-    const r = await action(u.id, { adminRoleTemplateId }, "Permission template updated");
-    if (r) setUsers((p) => p.map((x) => (x.id === u.id ? { ...x, adminRoleTemplateId } : x)));
-  };
-
   const resetPw = async (u: User) => {
     if (!confirm(`Reset password for ${u.fullName}?`)) return;
     const r = await action(u.id, { resetPassword: true }, "Password reset");
@@ -105,11 +77,105 @@ export function UsersCRUD({ users: initial }: { users: User[] }) {
     } catch { toast.error("Failed"); }
   };
 
+  const formatAgo = (iso: string) => {
+    const t = new Date(iso).getTime();
+    const diff = Date.now() - t;
+    if (diff < 60_000) return "just now";
+    if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} mins ago`;
+    if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} hrs ago`;
+    if (diff < 7 * 86_400_000) return `${Math.floor(diff / 86_400_000)} days ago`;
+    return new Date(iso).toLocaleDateString();
+  };
+
+  const joinStats = useMemo(() => {
+    const now = Date.now();
+    const mins15 = 15 * 60_000;
+    const hr1 = 60 * 60_000;
+    const day1 = 24 * 60 * 60_000;
+    const week1 = 7 * day1;
+    const joined = users.map((u) => ({ ...u, joinedAtMs: new Date(u.createdAt).getTime() }));
+    return {
+      justNow: joined.filter((u) => now - u.joinedAtMs <= mins15).length,
+      lastHour: joined.filter((u) => now - u.joinedAtMs <= hr1).length,
+      today: joined.filter((u) => now - u.joinedAtMs <= day1).length,
+      thisWeek: joined.filter((u) => now - u.joinedAtMs <= week1).length,
+      latest: [...joined].sort((a, b) => b.joinedAtMs - a.joinedAtMs).slice(0, 8),
+    };
+  }, [users]);
+
+  const activityStats = useMemo(() => {
+    const now = Date.now();
+    const day1 = 24 * 60 * 60_000;
+    const week1 = 7 * day1;
+    const updated = users.map((u) => ({ ...u, activityMs: new Date(u.updatedAt).getTime() }));
+    return {
+      today: updated.filter((u) => now - u.activityMs <= day1).length,
+      thisWeek: updated.filter((u) => now - u.activityMs <= week1).length,
+      latest: [...updated].sort((a, b) => b.activityMs - a.activityMs).slice(0, 8),
+    };
+  }, [users]);
+
   return (
     <div className="space-y-6">
       <div>
         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#5227FF]">Directory</p>
         <h1 className="mt-1 text-2xl font-bold text-white">Users ({users.length})</h1>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+          <p className="text-[10px] uppercase tracking-wider text-white/40">Just now</p>
+          <p className="mt-1 text-xl font-bold text-white">{joinStats.justNow}</p>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+          <p className="text-[10px] uppercase tracking-wider text-white/40">Last hour</p>
+          <p className="mt-1 text-xl font-bold text-white">{joinStats.lastHour}</p>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+          <p className="text-[10px] uppercase tracking-wider text-white/40">Joined today</p>
+          <p className="mt-1 text-xl font-bold text-white">{joinStats.today}</p>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+          <p className="text-[10px] uppercase tracking-wider text-white/40">Joined this week</p>
+          <p className="mt-1 text-xl font-bold text-white">{joinStats.thisWeek}</p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#5227FF]">Recent joiners</p>
+          <div className="mt-3 space-y-2">
+            {joinStats.latest.map((u) => (
+              <div key={u.id} className="flex items-center justify-between rounded-lg border border-white/[0.06] px-3 py-2">
+                <div>
+                  <p className="text-sm font-semibold text-white">{u.fullName}</p>
+                  <p className="text-[11px] text-white/45">{u.email}</p>
+                </div>
+                <p className="text-[11px] text-white/50">{formatAgo(u.createdAt)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#5227FF]">Recent activity</p>
+          <p className="mt-1 text-[11px] text-white/40">Based on latest user record updates</p>
+          <div className="mt-3 mb-3 flex gap-3 text-xs text-white/60">
+            <span>Today: <strong className="text-white">{activityStats.today}</strong></span>
+            <span>This week: <strong className="text-white">{activityStats.thisWeek}</strong></span>
+          </div>
+          <div className="space-y-2">
+            {activityStats.latest.map((u) => (
+              <div key={u.id} className="flex items-center justify-between rounded-lg border border-white/[0.06] px-3 py-2">
+                <div>
+                  <p className="text-sm font-semibold text-white">{u.fullName}</p>
+                  <p className="text-[11px] text-white/45">{u.email}</p>
+                </div>
+                <p className="text-[11px] text-white/50">{formatAgo(u.updatedAt)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
@@ -161,40 +227,9 @@ export function UsersCRUD({ users: initial }: { users: User[] }) {
                   <p className="text-[10px] text-white/25 mt-0.5">{u.collegeName}</p>
                 </td>
                 <td className="px-4 py-3">
-                  <select value={u.role} onChange={(e) => changeRole(u, e.target.value)}
-                    className="rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1 text-xs text-white outline-none"
-                    disabled={u.role === "ADMIN"}
-                  >
-                    <option value="STUDENT">Student</option>
-                    <option value="CLUB_HEADER">Club Header</option>
-                    <option value="ADMIN">Admin</option>
-                  </select>
-                  {u.role === "ADMIN" && (
-                    <div className="mt-2 flex flex-col gap-1.5">
-                      <select
-                        value={u.adminLevel ?? "SUPER_ADMIN"}
-                        onChange={(e) =>
-                          changeAdminLevel(u, e.target.value === "SUPER_ADMIN" ? "SUPER_ADMIN" : "MODERATOR")
-                        }
-                        className="rounded-lg border border-[#5227FF]/30 bg-[#5227FF]/10 px-2 py-1 text-[10px] text-white outline-none max-w-[11rem]"
-                      >
-                        <option value="SUPER_ADMIN">Super admin</option>
-                        <option value="MODERATOR">Moderator</option>
-                      </select>
-                      <select
-                        value={u.adminRoleTemplateId ?? ""}
-                        onChange={(e) => changeAdminTemplate(u, e.target.value || null)}
-                        className="rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1 text-[10px] text-white outline-none max-w-[11rem]"
-                      >
-                        <option value="">Template: default (level)</option>
-                        {roleTemplates.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+                  <span className="inline-block rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1 text-xs text-white">
+                    {u.role}
+                  </span>
                 </td>
                 <td className="px-4 py-3 text-xs text-white/40">{u.clubs.join(", ") || "—"}</td>
                 <td className="px-4 py-3">

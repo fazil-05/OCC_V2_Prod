@@ -12,7 +12,26 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  return NextResponse.json({ user });
+  return NextResponse.json({
+    user: {
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      collegeName: user.collegeName,
+      bio: user.bio,
+      city: user.city,
+      graduationYear: user.graduationYear,
+      avatar: user.avatar,
+      role: user.role,
+      approvalStatus: user.approvalStatus,
+      onboardingComplete: user.onboardingComplete,
+      referredBy: user.referredBy,
+      referralCode: user.referralCode,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    },
+  });
 }
 
 export async function PATCH(req: NextRequest) {
@@ -63,6 +82,24 @@ export async function PATCH(req: NextRequest) {
     const updated = await prisma.user.update({
       where: { id: user.id },
       data,
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        phoneNumber: true,
+        collegeName: true,
+        bio: true,
+        city: true,
+        graduationYear: true,
+        avatar: true,
+        role: true,
+        approvalStatus: true,
+        onboardingComplete: true,
+        referredBy: true,
+        referralCode: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
 
     // Audit Log for Admin Visibility

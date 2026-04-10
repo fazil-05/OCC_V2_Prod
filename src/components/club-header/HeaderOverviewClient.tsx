@@ -12,29 +12,55 @@ import {
   ChevronRight,
   ArrowRight,
   Copy,
+  Heart,
+  MessageCircle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { formatDistanceToNow } from "date-fns";
 import { pusherClient } from "@/lib/pusher";
+
+export type HeaderSocialActivityItem = {
+  id: string;
+  kind: "like" | "comment";
+  actorName: string;
+  summary: string;
+  postId: string;
+  createdAt: string;
+};
 
 interface Props {
   headerId: string;
+  clubId: string | null;
   membersCount: number;
   postsCount: number;
   clubName: string;
   referralCode: string;
   hasClub: boolean;
+  recentSocialActivity: HeaderSocialActivityItem[];
 }
 
 export function HeaderOverviewClient({
   headerId,
+  clubId,
   membersCount,
   postsCount,
   clubName,
   referralCode,
   hasClub,
+  recentSocialActivity,
 }: Props) {
   const router = useRouter();
   const [codeCopied, setCodeCopied] = useState(false);
+  const [liveSocial, setLiveSocial] = useState<HeaderSocialActivityItem[]>(recentSocialActivity);
+
+  const initialKey = useMemo(
+    () => recentSocialActivity.map((r) => `${r.id}:${r.createdAt}`).join("|"),
+    [recentSocialActivity],
+  );
+
+  useEffect(() => {
+    setLiveSocial(recentSocialActivity);
+  }, [initialKey]);
 
   useEffect(() => {
     const client = pusherClient;
@@ -50,6 +76,53 @@ export function HeaderOverviewClient({
       client.unsubscribe(channelName);
     };
   }, [headerId, router]);
+
+  useEffect(() => {
+    if (!pusherClient || !clubId) return;
+    const ch = pusherClient.subscribe(`club-${clubId}`);
+    const onLike = (data: {
+      postId: string;
+      action?: string;
+      actorName?: string;
+      actorUserId?: string;
+    }) => {
+      if (data.action !== "like" || !data.actorName) return;
+      const row: HeaderSocialActivityItem = {
+        id: `rt-like-${data.postId}-${Date.now()}`,
+        kind: "like",
+        actorName: data.actorName,
+        summary: `liked a post in ${clubName}`,
+        postId: data.postId,
+        createdAt: new Date().toISOString(),
+      };
+      setLiveSocial((prev) => [row, ...prev].slice(0, 20));
+    };
+    const onComment = (data: {
+      postId: string;
+      comment?: { user?: { fullName?: string }; content?: string };
+    }) => {
+      const name = data.comment?.user?.fullName;
+      const text = data.comment?.content?.trim();
+      if (!name || !text) return;
+      const prev = text.length > 64 ? `${text.slice(0, 61)}…` : text;
+      const row: HeaderSocialActivityItem = {
+        id: `rt-comment-${data.postId}-${Date.now()}`,
+        kind: "comment",
+        actorName: name,
+        summary: `commented: “${prev}”`,
+        postId: data.postId,
+        createdAt: new Date().toISOString(),
+      };
+      setLiveSocial((prev) => [row, ...prev].slice(0, 20));
+    };
+    ch.bind("new-like", onLike);
+    ch.bind("new-comment", onComment);
+    return () => {
+      ch.unbind("new-like", onLike);
+      ch.unbind("new-comment", onComment);
+      pusherClient?.unsubscribe(`club-${clubId}`);
+    };
+  }, [clubId, clubName]);
 
   const stats = [
     { label: "Members via code", value: membersCount, href: "/header/members", icon: Users, highlight: membersCount > 0 },
@@ -219,6 +292,63 @@ export function HeaderOverviewClient({
               {codeCopied ? "Copied!" : "Copy Code"}
             </button>
           </div>
+
+          {/* Recent social: likes & comments on your club posts */}
+          {hasClub && clubId ? (
+            <div className="rounded-[2rem] bg-[#0A0D20] border border-white/[0.05] p-7 shadow-2xl relative overflow-hidden">
+              <div className="flex justify-between items-center mb-5 relative z-10">
+                <h3 className="text-white font-semibold text-lg tracking-tight">Recent activity</h3>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#5227FF]/80">
+                  Live
+                </span>
+              </div>
+              <div className="relative z-10 max-h-[280px] space-y-3 overflow-y-auto pr-1 scrollbar-hide">
+                {liveSocial.length === 0 ? (
+                  <p className="text-xs text-white/40 leading-relaxed">
+                    Likes and comments on your club feed will appear here in real time.
+                  </p>
+                ) : (
+                  liveSocial.map((row) => (
+                    <div
+                      key={row.id}
+                      className="flex gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3"
+                    >
+                      <div
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                          row.kind === "like"
+                            ? "bg-red-500/15 text-red-400"
+                            : "bg-[#5227FF]/15 text-[#8C6DFD]"
+                        }`}
+                      >
+                        {row.kind === "like" ? (
+                          <Heart className="h-4 w-4 fill-current" />
+                        ) : (
+                          <MessageCircle className="h-4 w-4" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-white/90 leading-snug">
+                          <span className="font-semibold text-white">{row.actorName}</span>{" "}
+                          <span className="text-white/55">{row.summary}</span>
+                        </p>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                          <Link
+                            href={`/p/${row.postId}`}
+                            className="text-[10px] font-semibold text-[#8C6DFD] hover:underline"
+                          >
+                            View post
+                          </Link>
+                          <span className="text-[10px] text-white/30">
+                            {formatDistanceToNow(new Date(row.createdAt), { addSuffix: true })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          ) : null}
 
           {/* Activity Chart */}
           <div className="rounded-[2rem] bg-[#0A0D20] border border-white/[0.05] p-7 shadow-2xl relative overflow-hidden">

@@ -4,14 +4,26 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { Plus, ChevronDown, Trash2, X } from "lucide-react";
+import { Plus, ChevronDown, Trash2, X, Check, Loader2 } from "lucide-react";
 
 type Gig = {
   id: string; title: string; description: string; payMin: number; payMax: number;
   createdAt: string; deadline: string | null;
   club: { id: string; name: string } | null;
   postedBy: { id: string; fullName: string } | null;
-  applications: { id: string; status: string; message: string | null; createdAt: string; user: { id: string; fullName: string; email: string } }[];
+  applications: {
+    id: string;
+    status: string;
+    submissionVerified?: boolean;
+    message: string | null;
+    workDescription?: string | null;
+    submissionFileUrl?: string | null;
+    submissionFileName?: string | null;
+    submissionFileMime?: string | null;
+    submissionFileSize?: number | null;
+    createdAt: string;
+    user: { id: string; fullName: string; email: string };
+  }[];
 };
 
 export function GigsCRUD({ gigs: initial, clubs }: { gigs: Gig[]; clubs: { id: string; name: string }[] }) {
@@ -20,6 +32,7 @@ export function GigsCRUD({ gigs: initial, clubs }: { gigs: Gig[]; clubs: { id: s
   const [openId, setOpenId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [verifyBusyId, setVerifyBusyId] = useState<string | null>(null);
   const [form, setForm] = useState({ title: "", description: "", payMin: 0, payMax: 0, clubId: clubs[0]?.id || "" });
 
   const save = async () => {
@@ -35,6 +48,31 @@ export function GigsCRUD({ gigs: initial, clubs }: { gigs: Gig[]; clubs: { id: s
     if (!confirm("Delete this gig?")) return;
     await fetch(`/api/admin-cp/gigs/${id}`, { method: "DELETE" });
     setGigs((p) => p.filter((g) => g.id !== id)); toast.success("Deleted");
+  };
+
+  const verifySubmission = async (applicationId: string) => {
+    setVerifyBusyId(applicationId);
+    try {
+      const res = await fetch(`/api/gig-applications/${applicationId}/verify`, { method: "PATCH" });
+      const data = (await res.json().catch(() => null)) as { error?: string; alreadyVerified?: boolean } | null;
+      if (!res.ok) {
+        toast.error(data?.error || "Could not verify submission");
+        return;
+      }
+      setGigs((prev) =>
+        prev.map((g) => ({
+          ...g,
+          applications: g.applications.map((a) =>
+            a.id === applicationId ? { ...a, submissionVerified: true } : a,
+          ),
+        })),
+      );
+      toast.success(data?.alreadyVerified ? "Already verified" : "Submission verified");
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setVerifyBusyId(null);
+    }
   };
 
   return (
@@ -70,17 +108,89 @@ export function GigsCRUD({ gigs: initial, clubs }: { gigs: Gig[]; clubs: { id: s
                   className="border-t border-white/[0.04]">
                   <p className="px-5 py-3 text-xs text-white/40 leading-relaxed">{g.description}</p>
                   <div className="px-4 pb-4 space-y-1.5">
-                    {g.applications.map((a) => (
-                      <div key={a.id} className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-black/20 border border-white/[0.04]">
-                        <div>
-                          <span className="text-[13px] font-medium text-white">{a.user.fullName}</span>
-                          <span className="text-[10px] text-white/30 ml-2">{a.user.email}</span>
+                    {g.applications.map((a) => {
+                      const hasSubmission = !!a.workDescription?.trim() || !!a.submissionFileUrl?.trim();
+                      return (
+                        <div key={a.id} className="rounded-xl bg-black/20 border border-white/[0.04] px-4 py-2.5">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="text-[13px] font-medium text-white">{a.user.fullName}</span>
+                              <span className="text-[10px] text-white/30 ml-2">{a.user.email}</span>
+                            </div>
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${a.status === "APPROVED" ? "bg-[#00E87A]/15 text-[#00E87A]" : a.status === "REJECTED" ? "bg-red-500/15 text-red-300" : "bg-amber-500/15 text-amber-200"}`}>
+                              {a.status}
+                            </span>
+                          </div>
+
+                          {a.message ? (
+                            <p className="mt-2 text-[12px] text-white/45">{a.message}</p>
+                          ) : null}
+
+                          {hasSubmission ? (
+                            <div className="mt-2 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.06] p-2.5">
+                              <div className="mb-1.5 flex items-center justify-between">
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-200/90">
+                                  Project submission
+                                </span>
+                                <span
+                                  className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${
+                                    a.submissionVerified
+                                      ? "bg-emerald-500/20 text-emerald-200"
+                                      : "bg-amber-500/20 text-amber-100"
+                                  }`}
+                                >
+                                  {a.submissionVerified ? "Verified" : "Pending verification"}
+                                </span>
+                              </div>
+
+                              {a.workDescription ? (
+                                <p className="text-[12px] leading-relaxed text-white/70">{a.workDescription}</p>
+                              ) : null}
+
+                              {a.submissionFileUrl ? (
+                                <div className="mt-2 flex items-center justify-between gap-2 rounded-md border border-white/[0.08] bg-black/20 px-2.5 py-2">
+                                  <div className="min-w-0">
+                                    <p className="truncate text-[11px] font-medium text-white/80">
+                                      {a.submissionFileName || "submission-file"}
+                                    </p>
+                                    <p className="text-[10px] text-white/35">
+                                      {a.submissionFileMime || "document"}
+                                      {typeof a.submissionFileSize === "number"
+                                        ? ` · ${(a.submissionFileSize / (1024 * 1024)).toFixed(2)} MB`
+                                        : ""}
+                                    </p>
+                                  </div>
+                                  <a
+                                    href={a.submissionFileUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="shrink-0 rounded-md border border-white/20 px-2 py-1 text-[10px] font-semibold text-white/80 hover:bg-white/[0.07]"
+                                  >
+                                    Open
+                                  </a>
+                                </div>
+                              ) : null}
+
+                              {!a.submissionVerified ? (
+                                <button
+                                  type="button"
+                                  disabled={verifyBusyId === a.id}
+                                  onClick={() => void verifySubmission(a.id)}
+                                  className="mt-2 inline-flex items-center gap-1 rounded-lg bg-emerald-500/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-emerald-100 disabled:opacity-50"
+                                >
+                                  {verifyBusyId === a.id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <Check className="h-3 w-3" />
+                                  )}
+                                  Verify
+                                </button>
+                              ) : null}
+                            </div>
+                          ) : null}
                         </div>
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${a.status === "APPROVED" ? "bg-[#00E87A]/15 text-[#00E87A]" : a.status === "REJECTED" ? "bg-red-500/15 text-red-300" : "bg-amber-500/15 text-amber-200"}`}>
-                          {a.status}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                     {g.applications.length === 0 && <p className="text-xs text-white/20 text-center py-4">No applications yet</p>}
                   </div>
                 </motion.div>

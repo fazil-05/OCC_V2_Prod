@@ -41,10 +41,15 @@ export async function POST(_req: NextRequest, { params }: { params: { slug: stri
     },
   });
 
-  const displayMemberCount = displayClubMembers(club.id, updatedClub.memberCount);
+  const displayMemberCount = displayClubMembers(
+    club.id,
+    updatedClub.memberCount,
+    updatedClub.memberDisplayBase,
+  );
   await pusherServer.trigger(`club-${club.id}`, "member-joined", {
     clubId: club.id,
     memberCount: updatedClub.memberCount,
+    memberDisplayBase: updatedClub.memberDisplayBase,
     displayMemberCount,
   });
 

@@ -1,10 +1,34 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Users, Grid3X3, CheckCircle2, FileText, Calendar, Briefcase, TrendingUp, ShieldAlert, Sparkles, ArrowRight } from "lucide-react";
+import { pusherClient } from "@/lib/pusher";
+import {
+  Users,
+  Grid3X3,
+  CheckCircle2,
+  FileText,
+  Calendar,
+  Briefcase,
+  TrendingUp,
+  ShieldAlert,
+  Sparkles,
+  ArrowRight,
+  Heart,
+  MessageCircle,
+} from "lucide-react";
 import { adminCpHref } from "@/lib/staff-paths";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+
+type SocialRow = {
+  id: string;
+  kind: "like" | "comment";
+  actorName: string;
+  summary: string;
+  postId: string;
+  createdAt: string;
+};
 
 type Props = {
   stats: {
@@ -13,9 +37,52 @@ type Props = {
     recentSignups: number; alertCount: number;
   };
   recentAudit: { id: string; action: string; entity: string; adminEmail: string; createdAt: string }[];
+  recentSocial: SocialRow[];
 };
 
-export function AdminCPDashboard({ stats, recentAudit }: Props) {
+export function AdminCPDashboard({ stats, recentAudit, recentSocial }: Props) {
+  const [liveSocial, setLiveSocial] = useState(recentSocial);
+  const socialKey = useMemo(
+    () => recentSocial.map((r) => `${r.id}:${r.createdAt}`).join("|"),
+    [recentSocial],
+  );
+
+  useEffect(() => {
+    setLiveSocial(recentSocial);
+  }, [socialKey]);
+
+  useEffect(() => {
+    if (!pusherClient) return;
+    const ch = pusherClient.subscribe("admin-global");
+    const onSocial = (data: {
+      kind?: string;
+      actorName?: string;
+      summary?: string;
+      postId?: string;
+      createdAt?: string;
+    }) => {
+      const id = `rt-${data.kind || "social"}-${Date.now()}`;
+      setLiveSocial((prev) =>
+        [
+          {
+            id,
+            kind: data.kind === "comment" ? "comment" : "like",
+            actorName: data.actorName || "Member",
+            summary: data.summary || "",
+            postId: data.postId || "",
+            createdAt: data.createdAt || new Date().toISOString(),
+          },
+          ...prev,
+        ].slice(0, 24),
+      );
+    };
+    ch.bind("social-activity", onSocial);
+    return () => {
+      ch.unbind("social-activity", onSocial);
+      pusherClient.unsubscribe("admin-global");
+    };
+  }, []);
+
   const cards = [
     { label: "Total Users", value: stats.totalUsers, href: adminCpHref("/users"), icon: Users, color: "#5227FF" },
     { label: "Active Clubs", value: stats.activeClubs, href: adminCpHref("/clubs"), icon: Grid3X3, color: "#00E87A" },
@@ -84,13 +151,67 @@ export function AdminCPDashboard({ stats, recentAudit }: Props) {
         ))}
       </div>
 
+      {/* Live social: likes & comments (platform-wide) */}
+      {liveSocial.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.25 }}
+          className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-white">Recent social activity</h2>
+            <span className="text-[10px] uppercase tracking-widest text-white/35">Likes &amp; comments · live</span>
+          </div>
+          <div className="space-y-2">
+            {liveSocial.map((row) => (
+              <div
+                key={row.id}
+                className="flex items-start gap-3 py-2.5 border-b border-white/[0.04] last:border-0"
+              >
+                <div
+                  className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                    row.kind === "like" ? "bg-red-500/15 text-red-400" : "bg-[#5227FF]/15 text-[#8C6DFD]"
+                  }`}
+                >
+                  {row.kind === "like" ? (
+                    <Heart className="h-4 w-4 fill-current" />
+                  ) : (
+                    <MessageCircle className="h-4 w-4" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-white/90">
+                    <span className="font-semibold text-white">{row.actorName}</span>{" "}
+                    <span className="text-white/60">{row.summary}</span>
+                  </p>
+                  <div className="mt-1 flex items-center gap-2">
+                    {row.postId ? (
+                      <Link
+                        href={`/p/${row.postId}`}
+                        className="text-[10px] text-[#5227FF] hover:underline"
+                      >
+                        View post
+                      </Link>
+                    ) : null}
+                    <span className="text-[10px] text-white/30">
+                      {formatDistanceToNow(new Date(row.createdAt), { addSuffix: true })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
       {/* Recent Audit Log */}
       {recentAudit.length > 0 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
           className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6"
         >
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-white">Recent Activity</h2>
+            <h2 className="text-sm font-semibold text-white">Admin audit</h2>
             <Link href={adminCpHref("/audit")} className="text-xs text-[#5227FF] hover:underline">View all →</Link>
           </div>
           <div className="space-y-2">

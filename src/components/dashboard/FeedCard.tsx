@@ -21,7 +21,7 @@ type FeedCardProps = {
 export function FeedCard({ post }: FeedCardProps) {
   const [liked, setLiked] = React.useState(false);
   const [activeImage, setActiveImage] = React.useState(0);
-  const displayLikes = (post.likes || 1240) + (liked ? 1 : 0);
+  const displayLikes = (post.likes ?? 0) + (liked ? 1 : 0);
   const media = React.useMemo(() => {
     const list = (post.imageUrls || []).filter(Boolean);
     if (list.length > 0) return list;

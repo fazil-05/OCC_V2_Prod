@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher";
 import { resolveClubHeaderByReferralCode } from "@/lib/referral-resolve";
+import { displayClubMembers } from "@/lib/socialDisplay";
 
 /**
  * Links a student to a club header by referral code (membership + referral_stats + notification + Pusher).
@@ -32,6 +33,19 @@ export async function attachStudentToReferralCode(params: {
       create: { userId: params.studentId, clubId: managedClub.id },
     });
 
+    const memberCount = await prisma.clubMembership.count({
+      where: { clubId: managedClub.id },
+    });
+    const updatedClub = await prisma.club.update({
+      where: { id: managedClub.id },
+      data: { memberCount },
+    });
+    const displayMemberCount = displayClubMembers(
+      managedClub.id,
+      memberCount,
+      updatedClub.memberDisplayBase,
+    );
+
     const existingStat = await prisma.referralStat.findFirst({
       where: {
         clubHeaderId: headerUser.id,
@@ -47,6 +61,17 @@ export async function attachStudentToReferralCode(params: {
           clubId: managedClub.id,
         },
       });
+
+      try {
+        await pusherServer.trigger(`club-${managedClub.id}`, "member-joined", {
+          clubId: managedClub.id,
+          memberCount,
+          memberDisplayBase: updatedClub.memberDisplayBase,
+          displayMemberCount,
+        });
+      } catch {
+        /* non-critical */
+      }
 
       await prisma.notification.create({
         data: {

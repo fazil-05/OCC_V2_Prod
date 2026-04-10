@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
+import { randomMemberDisplayBase } from "@/lib/socialDisplay";
 
 /** Canonical OCC clubs — kept in sync with `prisma/seed.ts` for production self-heal. */
 export const OCC_DEFAULT_CLUBS = [
@@ -52,12 +53,26 @@ export const OCC_DEFAULT_CLUBS = [
   },
 ] as const;
 
+export async function backfillClubMemberDisplayBases(prisma: PrismaClient) {
+  const missing = await prisma.club.findMany({
+    where: { memberDisplayBase: null },
+    select: { id: true },
+  });
+  for (const { id } of missing) {
+    await prisma.club.update({
+      where: { id },
+      data: { memberDisplayBase: randomMemberDisplayBase() },
+    });
+  }
+}
+
 export async function ensureOccDefaultClubs(prisma: PrismaClient) {
   for (const club of OCC_DEFAULT_CLUBS) {
     await prisma.club.upsert({
       where: { slug: club.slug },
       update: {},
-      create: { ...club },
+      create: { ...club, memberDisplayBase: randomMemberDisplayBase() },
     });
   }
+  await backfillClubMemberDisplayBases(prisma);
 }

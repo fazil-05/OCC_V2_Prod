@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/auth";
+import { logPrivilegedMutation } from "@/lib/mutation-audit";
 import {
   type AdminAction,
   type AdminModule,
@@ -36,6 +37,16 @@ export async function requireAdminPermission(
   if (!can(access, module, action)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  // Centralized audit trail for privileged API permission checks.
+  await logPrivilegedMutation({
+    actor: { id: admin.id, email: admin.email, role: "ADMIN" },
+    method: "MUTATION_OR_READ",
+    path: "admin-api-guard",
+    module,
+    action,
+    details: { source: "requireAdminPermission" },
+  });
 
   return {
     id: admin.id,

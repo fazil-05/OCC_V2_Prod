@@ -1,15 +1,14 @@
 "use client";
 
-import { 
-  Heart, 
-  MessageCircle, 
-  Share2, 
-  Bookmark, 
+import {
+  Heart,
+  MessageCircle,
+  Share2,
+  Bookmark,
   MoreHorizontal,
   BadgeCheck,
-  Zap,
   Trash2,
-  Flag
+  Flag,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect, useMemo } from "react";
@@ -52,6 +51,28 @@ function stripHashtags(text: string): string {
   return text.replace(/#[A-Za-z0-9_]+/g, "").replace(/\s{2,}/g, " ").trim();
 }
 
+async function copyTextToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
+
 type PostComment = {
   id: string;
   content: string;
@@ -60,8 +81,6 @@ type PostComment = {
     id?: string;
     fullName?: string;
     avatar?: string | null;
-    email?: string | null;
-    phoneNumber?: string | null;
   };
 };
 
@@ -136,6 +155,11 @@ export function OCCPostCard({
   const [lightboxTouchStartX, setLightboxTouchStartX] = useState<number | null>(null);
   const [mediaSrc, setMediaSrc] = useState(mediaList[0] || post.imageUrl);
   const imgRef = useRef<HTMLImageElement>(null);
+  const cardRef = useRef<HTMLElement | null>(null);
+  /** Invalidates stale in-flight `/engagement` responses after the user mutates like/bookmark. */
+  const engagementSeq = useRef(0);
+  /** One in-flight like request — Instagram-style single tap, no double-count races. */
+  const likeInFlight = useRef(false);
 
   const premiumFallback = useMemo(
     () => premiumClubImageForName(post.clubName || ""),
@@ -170,15 +194,66 @@ export function OCCPostCard({
     setIsCommentsOpen(false);
   }, [post.id, post.commentsCount]);
 
+  useEffect(() => {
+    if (!currentUserId) return;
+    const seq = ++engagementSeq.current;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/posts/${post.id}/engagement`, { credentials: "include" });
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          liked?: boolean;
+          bookmarked?: boolean;
+          likesCount?: number;
+        };
+        if (cancelled || seq !== engagementSeq.current) return;
+        if (typeof data.likesCount === "number") setLikeCount(data.likesCount);
+        if (typeof data.liked === "boolean") setLiked(data.liked);
+        if (typeof data.bookmarked === "boolean") setSaved(data.bookmarked);
+      } catch {
+        /* keep SSR defaults */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [post.id, currentUserId]);
+
+  useEffect(() => {
+    const id = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("post") : null;
+    if (id !== post.id || !cardRef.current) return;
+    const t = window.setTimeout(() => {
+      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+    return () => window.clearTimeout(t);
+  }, [post.id]);
+
   // REALTIME - Listening for likes and comments
   useEffect(() => {
     if (!pusherClient || !post.clubId) return;
 
     const channel = pusherClient.subscribe(`club-${post.clubId}`);
     if (channel) {
-      channel.bind("new-like", (data: { postId: string; likesCount: number }) => {
-        if (data.postId === post.id) setLikeCount(data.likesCount);
-      });
+      channel.bind(
+        "new-like",
+        (data: {
+          postId: string;
+          likesCount: number;
+          actorUserId?: string;
+          action?: "like" | "unlike";
+        }) => {
+          if (data.postId !== post.id) return;
+          setLikeCount(data.likesCount);
+          if (
+            currentUserId &&
+            data.actorUserId === currentUserId &&
+            (data.action === "like" || data.action === "unlike")
+          ) {
+            setLiked(data.action === "like");
+          }
+        },
+      );
 
       channel.bind("new-comment", (data: { postId: string; comment: PostComment; commentsCount?: number }) => {
         if (data.postId === post.id) {
@@ -205,7 +280,7 @@ export function OCCPostCard({
     return () => {
       pusherClient?.unsubscribe(`club-${post.clubId}`);
     };
-  }, [post.id, post.clubId]);
+  }, [post.id, post.clubId, currentUserId]);
 
   const handleImageLoad = () => {
     setIsLoaded(true);
@@ -248,36 +323,64 @@ export function OCCPostCard({
   const closeLightbox = () => setIsLightboxOpen(false);
 
   const toggleLike = async () => {
+    if (!currentUserId || likeInFlight.current) return;
+    likeInFlight.current = true;
+    engagementSeq.current += 1;
     const prevLiked = liked;
     const prevCount = likeCount;
     setLiked(!liked);
     setLikeCount(liked ? likeCount - 1 : likeCount + 1);
 
     try {
-      const res = await fetch(`/api/posts/${post.id}/like`, { method: "POST" });
-      const data = await res.json();
-      if (data.likesCount !== undefined) setLikeCount(data.likesCount);
-    } catch (e) {
+      const res = await fetch(`/api/posts/${post.id}/like`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = (await res.json()) as { likesCount?: number; liked?: boolean };
+      if (!res.ok) throw new Error("like failed");
+      if (typeof data.likesCount === "number") setLikeCount(data.likesCount);
+      if (typeof data.liked === "boolean") setLiked(data.liked);
+    } catch {
       setLiked(prevLiked);
       setLikeCount(prevCount);
+    } finally {
+      likeInFlight.current = false;
+    }
+  };
+
+  const toggleBookmark = async () => {
+    if (!currentUserId) return;
+    engagementSeq.current += 1;
+    const prev = saved;
+    setSaved(!saved);
+    try {
+      const res = await fetch(`/api/posts/${post.id}/bookmark`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = (await res.json()) as { bookmarked?: boolean };
+      if (!res.ok) throw new Error("bookmark failed");
+      if (typeof data.bookmarked === "boolean") setSaved(data.bookmarked);
+    } catch {
+      setSaved(prev);
     }
   };
 
   const handleShare = async () => {
+    if (!currentUserId) return;
     const shareUrl = `${window.location.origin}/p/${post.id}`;
-    try {
-      await navigator.clipboard.writeText(shareUrl);
+    const ok = await copyTextToClipboard(shareUrl);
+    if (ok) {
       setShareCopied(true);
-      window.setTimeout(() => setShareCopied(false), 1800);
-    } catch (e) {
-      // Fallback for browsers/contexts where clipboard API is blocked.
-      window.open(shareUrl, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => setShareCopied(false), 2000);
+      return;
     }
+    window.prompt("Copy this link (registered members only can open it):", shareUrl);
   };
 
   const fetchComments = async () => {
     try {
-      const res = await fetch(`/api/posts/${post.id}/comment`);
+      const res = await fetch(`/api/posts/${post.id}/comment`, { credentials: "include" });
       const data = await res.json();
       if (Array.isArray(data)) {
         setComments(data);
@@ -300,8 +403,9 @@ export function OCCPostCard({
     try {
       const res = await fetch(`/api/posts/${post.id}/comment`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: commentText.trim() })
+        body: JSON.stringify({ content: commentText.trim() }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -326,7 +430,7 @@ export function OCCPostCard({
   const handleDeleteComment = async (commentId: string) => {
     if (!confirm("Remove this intellectual block? This action is permanent and logged for Admin review.")) return;
     try {
-      const res = await fetch(`/api/comments/${commentId}`, { method: "DELETE" });
+      const res = await fetch(`/api/comments/${commentId}`, { method: "DELETE", credentials: "include" });
       if (res.ok) {
         setComments(prev => prev.filter(c => c.id !== commentId));
         setCommentsCount((prev) => Math.max(0, prev - 1));
@@ -340,14 +444,17 @@ export function OCCPostCard({
     try {
       await fetch(`/api/comments/${commentId}/report`, {
         method: "POST",
-        body: JSON.stringify({ reason })
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
       });
       alert("Comment flagged. Our Elite Safety team will review the intel shortly.");
     } catch (e) {}
   };
 
   return (
-    <motion.article 
+    <motion.article
+      ref={cardRef}
       layout
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
@@ -477,7 +584,9 @@ export function OCCPostCard({
                   <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-[#5227FF]" fill="#5227FF" />
                 </div>
                 <span className="text-[9px] font-medium text-black/35 uppercase tracking-[0.08em] font-sans">
-                  {post.clubMembersLabel || "800 Members"} · {post.clubName || "OCC"}
+                  {post.clubMembersLabel
+                    ? `${post.clubMembersLabel} · ${post.clubName || "OCC"}`
+                    : post.clubName || "OCC"}
                 </span>
               </div>
             </div>
@@ -551,17 +660,6 @@ export function OCCPostCard({
                                   </button>
                                 </div>
                               </div>
-                              
-                              {(comment.user.email || comment.user.phoneNumber) && (
-                                <div className="bg-[#5227FF]/[0.03] p-2.5 sm:p-3 rounded-xl border border-[#5227FF]/10 shadow-sm animate-in fade-in zoom-in-95 duration-500">
-                                  <div className="flex items-center gap-2 mb-0.5 sm:mb-1">
-                                    <Zap className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[#5227FF]" fill="currentColor" />
-                                    <span className="text-[8px] sm:text-[9px] font-semibold uppercase tracking-[0.2em] text-[#5227FF]">Moderator Intel</span>
-                                  </div>
-                                  {comment.user.email && <div className="text-[10px] sm:text-[11px] font-medium text-black/80">{comment.user.email}</div>}
-                                  {comment.user.phoneNumber && <div className="text-[10px] sm:text-[11px] font-medium text-black/40 mt-0.5">{comment.user.phoneNumber}</div>}
-                                </div>
-                              )}
 
                               <p className="text-[12.5px] sm:text-[13.5px] font-medium leading-relaxed text-black/60 font-sans">
                                 {comment.content}
@@ -584,7 +682,13 @@ export function OCCPostCard({
           <div className="mt-4 sm:mt-5 pt-4 sm:pt-5 border-t border-black/[0.06]">
             <div className="mb-4 flex items-center justify-between sm:mb-4">
               <div className="flex items-center gap-3 sm:gap-5">
-                <button type="button" onClick={toggleLike} className="group flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={toggleLike}
+                  disabled={!currentUserId}
+                  title={!currentUserId ? "Sign in to like" : undefined}
+                  className="group flex items-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-40"
+                >
                   <Heart className={`h-[22px] w-[22px] sm:h-6 sm:w-6 transition-all ${liked ? "text-[#FF3040] fill-[#FF3040]" : "text-black/25 group-hover:text-[#FF3040]"}`} strokeWidth={2.2} />
                   <span className="text-[12px] font-semibold text-black/75 font-sans tabular-nums">
                     {likeCount.toLocaleString("en-IN")}
@@ -600,11 +704,24 @@ export function OCCPostCard({
                 </button>
               </div>
               <div className="flex items-center gap-1">
-                <button type="button" onClick={handleShare} className="flex items-center gap-1.5 rounded-xl border border-black/[0.06] bg-black/[0.02] p-2 text-black/25 transition hover:text-black/60">
-                  <Share2 className="h-4 w-4" />
-                  {shareCopied ? <span className="text-[10px] font-semibold">Copied</span> : null}
-                </button>
-                <button type="button" onClick={() => setSaved(!saved)} className="rounded-xl border border-black/[0.06] bg-black/[0.02] p-2 text-black/25 transition hover:text-black/50">
+                {currentUserId ? (
+                  <button
+                    type="button"
+                    onClick={handleShare}
+                    title="Copy link to this post (members only)"
+                    className="flex items-center gap-1.5 rounded-xl border border-black/[0.06] bg-black/[0.02] p-2 text-black/25 transition hover:text-black/60"
+                  >
+                    <Share2 className="h-4 w-4" />
+                    {shareCopied ? <span className="text-[10px] font-semibold">Copied</span> : null}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={toggleBookmark}
+                  disabled={!currentUserId}
+                  title={!currentUserId ? "Sign in to save" : "Save post"}
+                  className="rounded-xl border border-black/[0.06] bg-black/[0.02] p-2 text-black/25 transition hover:text-black/50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
                   <Bookmark className={`h-4 w-4 ${saved ? "text-black fill-black" : ""}`} />
                 </button>
               </div>

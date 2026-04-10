@@ -6,10 +6,12 @@ import { format } from "date-fns";
 import { Check, ChevronDown, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { pusherClient } from "@/lib/pusher";
+import { toast } from "sonner";
 
 type AppRow = {
   id: string;
   status: string;
+  submissionVerified?: boolean;
   message: string | null;
   workDescription: string | null;
   submissionFileUrl: string | null;
@@ -56,6 +58,7 @@ export function ClubHeaderGigsClient({ initialGigs }: { initialGigs: HeaderGigRo
   const [gigs, setGigs] = useState(initialGigs);
   const [openId, setOpenId] = useState<string | null>(initialGigs[0]?.id ?? null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [verifyBusyId, setVerifyBusyId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(initialGigs.length === 0);
   const [createLoading, setCreateLoading] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
@@ -237,6 +240,31 @@ export function ClubHeaderGigsClient({ initialGigs }: { initialGigs: HeaderGigRo
       );
     } finally {
       setBusy(null);
+    }
+  };
+
+  const verifySubmission = async (applicationId: string) => {
+    setVerifyBusyId(applicationId);
+    try {
+      const res = await fetch(`/api/gig-applications/${applicationId}/verify`, {
+        method: "PATCH",
+      });
+      const data = (await res.json().catch(() => null)) as { error?: string; alreadyVerified?: boolean } | null;
+      if (!res.ok) {
+        toast.error(data?.error || "Could not verify submission");
+        return;
+      }
+      setGigs((prev) =>
+        prev.map((g) => ({
+          ...g,
+          applications: g.applications.map((a) =>
+            a.id === applicationId ? { ...a, submissionVerified: true } : a,
+          ),
+        })),
+      );
+      toast.success(data?.alreadyVerified ? "Already verified" : "Submission verified");
+    } finally {
+      setVerifyBusyId(null);
     }
   };
 
@@ -494,11 +522,31 @@ export function ClubHeaderGigsClient({ initialGigs }: { initialGigs: HeaderGigRo
                                   {a.message}
                                 </p>
                               ) : null}
-                              {a.workDescription ? (
-                                <p className="mt-2 text-[13px] leading-relaxed text-white/60">
-                                  <span className="text-[10px] font-semibold uppercase text-white/35">Work summary · </span>
-                                  {a.workDescription}
-                                </p>
+                              {a.workDescription || a.submissionFileUrl ? (
+                                <div className="mt-3 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-3">
+                                  <div className="mb-2 flex items-center justify-between">
+                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-200/90">
+                                      Project submission
+                                    </p>
+                                    <span
+                                      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
+                                        a.submissionVerified
+                                          ? "bg-emerald-500/20 text-emerald-200"
+                                          : "bg-amber-500/20 text-amber-100"
+                                      }`}
+                                    >
+                                      {a.submissionVerified ? "Verified" : "Pending verification"}
+                                    </span>
+                                  </div>
+                                  {a.workDescription ? (
+                                    <p className="text-[13px] leading-relaxed text-white/70">
+                                      <span className="text-[10px] font-semibold uppercase text-white/40">
+                                        Work summary ·{" "}
+                                      </span>
+                                      {a.workDescription}
+                                    </p>
+                                  ) : null}
+                                </div>
                               ) : null}
                               {a.submissionFileUrl ? (
                                 <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2">
@@ -546,6 +594,23 @@ export function ClubHeaderGigsClient({ initialGigs }: { initialGigs: HeaderGigRo
                                   >
                                     <X className="h-3.5 w-3.5" />
                                     Decline
+                                  </button>
+                                </div>
+                              ) : null}
+                              {a.status === "APPROVED" && (a.workDescription || a.submissionFileUrl) && !a.submissionVerified ? (
+                                <div className="mt-3">
+                                  <button
+                                    type="button"
+                                    disabled={verifyBusyId === a.id}
+                                    onClick={() => void verifySubmission(a.id)}
+                                    className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500/20 px-4 py-2 text-xs font-semibold text-emerald-200 transition hover:bg-emerald-500/30 disabled:opacity-50"
+                                  >
+                                    {verifyBusyId === a.id ? (
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                      <Check className="h-3.5 w-3.5" />
+                                    )}
+                                    Verify submission
                                   </button>
                                 </div>
                               ) : null}

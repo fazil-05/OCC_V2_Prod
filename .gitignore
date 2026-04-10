@@ -27,6 +27,7 @@ public/uploads/
 *.zip
 *.log
 *.bak
+*.dump
 .env
 .env.*
 !.env.example

@@ -19,8 +19,8 @@ export function ApprovalsPanel({ approvals: initial }: { approvals: Approval[] }
 
   const decide = async (id: string, action: "approve" | "reject") => {
     try {
-      const url = action === "approve" ? "/api/admin/approve" : "/api/admin/reject";
-      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: id }) });
+      const url = action === "approve" ? `/api/admin/approve/${id}` : `/api/admin/reject/${id}`;
+      const res = await fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" } });
       if (!res.ok) { toast.error("Failed"); return; }
       setApprovals((p) => p.filter((a) => a.id !== id));
       toast.success(action === "approve" ? "Approved!" : "Rejected");

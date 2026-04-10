@@ -112,7 +112,8 @@ export function resolveEffectiveAccess(params: {
   adminLevel: string | null | undefined;
   templatePermissions: unknown;
 }): EffectiveAdminAccess {
-  const level = (params.adminLevel ?? "SUPER_ADMIN") as AdminLevel;
+  // Security default: never treat missing adminLevel as SUPER_ADMIN.
+  const level = ((params.adminLevel ?? "MODERATOR") as AdminLevel) || "MODERATOR";
   const parsed = parseTemplatePermissions(params.templatePermissions);
   if (parsed) {
     return { fullAccess: false, matrix: parsed };

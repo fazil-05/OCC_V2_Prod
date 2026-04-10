@@ -37,7 +37,14 @@ type ApiPost = {
   createdAt: string;
   clubId: string;
   user: { id: string; fullName: string; avatar: string | null; role: string };
-  club: { id: string; name: string; slug: string; icon: string; coverImage: string | null } | null;
+  club: {
+    id: string;
+    name: string;
+    slug: string;
+    icon: string;
+    coverImage: string | null;
+    clubMembersLabel?: string;
+  } | null;
 };
 
 function toCards(posts: ApiPost[]): OCCPost[] {
@@ -56,6 +63,7 @@ function toCards(posts: ApiPost[]): OCCPost[] {
       commentsCount: p.commentsCount ?? 0,
       clubId: p.clubId,
       clubName: p.club?.name || "OCC Club",
+      clubMembersLabel: p.club?.clubMembersLabel,
     };
   });
 }

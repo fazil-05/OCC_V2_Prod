@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { Clock, Loader2, Plus, Upload, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import { pusherClient } from "@/lib/pusher";
 import { ECLUBS_PUSHER_CHANNEL } from "@/lib/gigs-realtime";
 
@@ -31,15 +32,30 @@ type GigRow = {
   deadline: Date | string | null;
   club: { name: string; slug: string; icon: string; coverImage?: string | null } | null;
   postedBy: { fullName: string } | null;
-  applications: { id: string; status: string }[];
+  applications: {
+    id: string;
+    status: string;
+    workDescription?: string | null;
+    submissionFileUrl?: string | null;
+  }[];
 };
 
-function applicationLabel(status: string | undefined): string | null {
+function applicationLabel(
+  status: string | undefined,
+  opts?: { approvedHasDelivery?: boolean },
+): string | null {
   if (!status) return null;
   if (status === "PENDING" || status === "applied") return "Pending review";
-  if (status === "APPROVED") return "Approved";
+  if (status === "APPROVED") return opts?.approvedHasDelivery ? "Project submitted" : "Approved — submit your work";
   if (status === "REJECTED") return "Not selected";
   return null;
+}
+
+function hasDeliverySubmitted(mine: GigRow["applications"][0] | undefined): boolean {
+  if (!mine) return false;
+  const text = mine.workDescription?.trim();
+  const file = mine.submissionFileUrl?.trim();
+  return Boolean((text && text.length > 0) || file);
 }
 
 export function EClubsView({
@@ -68,11 +84,18 @@ export function EClubsView({
   const [fEmail, setFEmail] = useState(applicantProfile.email);
   const [fPhone, setFPhone] = useState(applicantProfile.phoneNumber);
   const [fPitch, setFPitch] = useState("");
-  const [workDescription, setWorkDescription] = useState("");
-  const [submissionFile, setSubmissionFile] = useState<File | null>(null);
-  const [uploadingFile, setUploadingFile] = useState(false);
   const [applyLoading, setApplyLoading] = useState(false);
   const [justSubmitted, setJustSubmitted] = useState<string | null>(null);
+
+  const [deliverModal, setDeliverModal] = useState<{
+    gigId: string;
+    applicationId: string;
+    title: string;
+  } | null>(null);
+  const [deliverWork, setDeliverWork] = useState("");
+  const [deliverFile, setDeliverFile] = useState<File | null>(null);
+  const [deliverUploading, setDeliverUploading] = useState(false);
+  const [deliverLoading, setDeliverLoading] = useState(false);
 
   useEffect(() => {
     if (!pusherClient) return;
@@ -92,25 +115,33 @@ export function EClubsView({
     setFEmail(applicantProfile.email);
     setFPhone(applicantProfile.phoneNumber);
     setFPitch("");
-    setWorkDescription("");
-    setSubmissionFile(null);
   };
 
   const closeApplyModal = () => {
     setApplyModalGigId(null);
   };
 
-  const uploadSubmissionFile = async (): Promise<{
+  const openDeliverModal = (gigId: string, applicationId: string, gigTitle: string) => {
+    setDeliverModal({ gigId, applicationId, title: gigTitle });
+    setDeliverWork("");
+    setDeliverFile(null);
+  };
+
+  const closeDeliverModal = () => {
+    setDeliverModal(null);
+  };
+
+  const uploadDeliverFile = async (): Promise<{
     url: string;
     name: string;
     mime: string;
     size: number;
   } | null> => {
-    if (!submissionFile) return null;
+    if (!deliverFile) return null;
     const formData = new FormData();
-    formData.append("file", submissionFile);
+    formData.append("file", deliverFile);
     formData.append("purpose", "gig_submission");
-    setUploadingFile(true);
+    setDeliverUploading(true);
     try {
       const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
       if (!uploadRes.ok) return null;
@@ -118,12 +149,12 @@ export function EClubsView({
       if (!payload?.url) return null;
       return {
         url: payload.url,
-        name: submissionFile.name,
-        mime: submissionFile.type || "application/octet-stream",
-        size: submissionFile.size,
+        name: deliverFile.name,
+        mime: deliverFile.type || "application/octet-stream",
+        size: deliverFile.size,
       };
     } finally {
-      setUploadingFile(false);
+      setDeliverUploading(false);
     }
   };
 
@@ -132,8 +163,6 @@ export function EClubsView({
     if (!applyModalGigId) return;
     setApplyLoading(true);
     try {
-      const maybeUploaded = await uploadSubmissionFile();
-      const finalFileMeta = maybeUploaded;
       const res = await fetch("/api/gigs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -143,21 +172,56 @@ export function EClubsView({
           applicantName: fName.trim(),
           applicantEmail: fEmail.trim(),
           applicantPhone: fPhone.trim(),
-          workDescription: workDescription.trim(),
-          submissionFileUrl: finalFileMeta?.url,
-          submissionFileName: finalFileMeta?.name,
-          submissionFileMime: finalFileMeta?.mime,
-          submissionFileSize: finalFileMeta?.size,
         }),
       });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (res.ok) {
         setJustSubmitted(applyModalGigId);
         closeApplyModal();
         window.setTimeout(() => setJustSubmitted(null), 2400);
         router.refresh();
+        toast.success("Application sent — the club will review it.");
+      } else {
+        toast.error(data.error || "Could not send application");
       }
     } finally {
       setApplyLoading(false);
+    }
+  };
+
+  const submitDeliverables = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deliverModal) return;
+    const w = deliverWork.trim();
+    if (w.length < 10) {
+      toast.error("Describe your work or plan (at least 10 characters).");
+      return;
+    }
+    setDeliverLoading(true);
+    try {
+      const uploaded = await uploadDeliverFile();
+      const res = await fetch("/api/gig-applications/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          gigId: deliverModal.gigId,
+          workDescription: w,
+          submissionFileUrl: uploaded?.url,
+          submissionFileName: uploaded?.name,
+          submissionFileMime: uploaded?.mime,
+          submissionFileSize: uploaded?.size,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (res.ok) {
+        closeDeliverModal();
+        router.refresh();
+        toast.success("Project submitted — the club header can review your deliverables.");
+      } else {
+        toast.error(data.error || "Could not submit project");
+      }
+    } finally {
+      setDeliverLoading(false);
     }
   };
 
@@ -277,25 +341,91 @@ export function EClubsView({
                     className="mt-1 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400"
                   />
                 </div>
+                <p className="rounded-xl bg-slate-50 px-3 py-2 text-[11px] leading-relaxed text-slate-600">
+                  After the club approves your application, you&apos;ll submit your project (description + optional file) in a second step — like a freelancing platform.
+                </p>
+                <motion.button
+                  type="submit"
+                  disabled={applyLoading}
+                  whileHover={{ scale: applyLoading ? 1 : 1.02 }}
+                  whileTap={{ scale: applyLoading ? 1 : 0.98 }}
+                  className="relative w-full overflow-hidden rounded-2xl bg-slate-900 py-3.5 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 disabled:opacity-60"
+                >
+                  {applyLoading ? (
+                    <span className="inline-flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Sending…
+                    </span>
+                  ) : (
+                    "Submit application"
+                  )}
+                </motion.button>
+              </form>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {deliverModal ? (
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="deliver-modal-title"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] flex items-end justify-center p-4 sm:items-center"
+          >
+            <button
+              type="button"
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              aria-label="Close"
+              onClick={closeDeliverModal}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 420, damping: 32 }}
+              className="relative z-10 w-full max-w-md rounded-3xl border border-black/[0.08] bg-white p-6 shadow-[0_24px_80px_-20px_rgba(0,0,0,0.35)]"
+            >
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <p id="deliver-modal-title" className="text-lg font-semibold tracking-tight text-slate-900">
+                    Submit project
+                  </p>
+                  <p className="mt-0.5 text-sm text-slate-500 line-clamp-2">{deliverModal.title}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeDeliverModal}
+                  className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <form onSubmit={submitDeliverables} className="space-y-3">
                 <div>
                   <div className="flex items-center justify-between">
                     <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                      Work completion description
+                      Work completion / deliverables
                     </label>
-                    <span className="text-[10px] font-medium text-slate-400">{workDescription.length}/1000</span>
+                    <span className="text-[10px] font-medium text-slate-400">{deliverWork.length}/5000</span>
                   </div>
                   <textarea
                     required
-                    value={workDescription}
-                    onChange={(e) => setWorkDescription(e.target.value.slice(0, 1000))}
-                    placeholder="Describe what you completed / how you will execute this task"
-                    rows={4}
+                    minLength={10}
+                    value={deliverWork}
+                    onChange={(e) => setDeliverWork(e.target.value.slice(0, 5000))}
+                    placeholder="Describe what you completed or how you will deliver the gig"
+                    rows={5}
                     className="mt-1 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400"
                   />
                 </div>
                 <div className="rounded-xl border border-slate-200 p-3">
                   <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    Attach submission (PDF, DOC, DOCX, PPT, PPTX up to 30MB)
+                    Attach file (optional — PDF, DOC, DOCX, PPT, PPTX up to 30MB)
                   </label>
                   <div className="mt-2 flex items-center gap-2">
                     <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50">
@@ -305,31 +435,28 @@ export function EClubsView({
                         type="file"
                         accept=".pdf,.doc,.docx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
                         className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0] ?? null;
-                          setSubmissionFile(file);
-                        }}
+                        onChange={(e) => setDeliverFile(e.target.files?.[0] ?? null)}
                       />
                     </label>
                     <span className="min-w-0 truncate text-xs text-slate-500">
-                      {submissionFile?.name || "No file selected"}
+                      {deliverFile?.name || "No file selected"}
                     </span>
                   </div>
                 </div>
                 <motion.button
                   type="submit"
-                  disabled={applyLoading || uploadingFile}
-                  whileHover={{ scale: applyLoading || uploadingFile ? 1 : 1.02 }}
-                  whileTap={{ scale: applyLoading || uploadingFile ? 1 : 0.98 }}
-                  className="relative w-full overflow-hidden rounded-2xl bg-slate-900 py-3.5 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 disabled:opacity-60"
+                  disabled={deliverLoading || deliverUploading}
+                  whileHover={{ scale: deliverLoading || deliverUploading ? 1 : 1.02 }}
+                  whileTap={{ scale: deliverLoading || deliverUploading ? 1 : 0.98 }}
+                  className="relative w-full overflow-hidden rounded-2xl bg-emerald-700 py-3.5 text-sm font-semibold text-white shadow-lg disabled:opacity-60"
                 >
-                  {applyLoading || uploadingFile ? (
+                  {deliverLoading || deliverUploading ? (
                     <span className="inline-flex items-center justify-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      {uploadingFile ? "Uploading file…" : "Sending…"}
+                      {deliverUploading ? "Uploading…" : "Submitting…"}
                     </span>
                   ) : (
-                    "Submit application"
+                    "Submit project"
                   )}
                 </motion.button>
               </form>
@@ -343,7 +470,7 @@ export function EClubsView({
           <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-[#5227FF]">E-Clubs</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Gigs marketplace</h1>
           <p className="mt-1 max-w-xl text-sm text-slate-500">
-            Real club-posted gigs only. The list refreshes live when Pusher is on. Apply once per gig — club headers see your contact details and short intro.
+            Apply with a short intro first; after the club approves, you submit your project (description + optional file). Same flow as major freelancing platforms.
           </p>
         </div>
         {canPost ? (
@@ -448,7 +575,10 @@ export function EClubsView({
             const mine = gig.applications[0];
             const rawStatus = mine?.status;
             const status = rawStatus === "applied" ? "PENDING" : rawStatus;
-            const label = applicationLabel(rawStatus);
+            const submittedDelivery = hasDeliverySubmitted(mine);
+            const label = applicationLabel(rawStatus, {
+              approvedHasDelivery: status === "APPROVED" ? submittedDelivery : false,
+            });
             const isOwner = gig.postedById === userId;
             const tags = requirementTags(gig.description);
             const posterName = gig.postedBy?.fullName || gig.club?.name || "Club";
@@ -536,8 +666,28 @@ export function EClubsView({
                   <p className="mt-5 text-center text-xs font-semibold text-violet-700">
                     Your gig — review applicants in Club Panel → Gigs.
                   </p>
-                ) : showApproved ? (
-                  <p className="mt-5 text-center text-sm font-semibold text-emerald-700">{label}</p>
+                ) : showApproved && !submittedDelivery ? (
+                  <div className="mt-5 flex flex-col gap-2">
+                    <p className="text-center text-sm font-semibold text-emerald-700">{label}</p>
+                    {mine?.id ? (
+                      <motion.button
+                        type="button"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => openDeliverModal(gig.id, mine.id, gig.title)}
+                        className="w-full rounded-2xl bg-emerald-700 py-3.5 text-sm font-semibold text-white shadow-md shadow-emerald-900/20"
+                      >
+                        Submit project
+                      </motion.button>
+                    ) : null}
+                  </div>
+                ) : showApproved && submittedDelivery ? (
+                  <div className="mt-5 flex flex-col gap-1">
+                    <p className="text-center text-sm font-semibold text-emerald-800">{label}</p>
+                    <p className="text-center text-[11px] text-slate-500">
+                      The club header can review your files and description in Club Panel → Gigs.
+                    </p>
+                  </div>
                 ) : showPending || submittedFlash ? (
                   <motion.div
                     initial={{ opacity: 0, y: 6 }}
