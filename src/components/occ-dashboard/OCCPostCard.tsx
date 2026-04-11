@@ -15,6 +15,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { avatarSrc } from "@/lib/avatar";
 import { premiumClubImageForName } from "@/lib/postImageUrl";
 import { pusherClient } from "@/lib/pusher";
+import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/avatar";
 
 export type OCCPost = {
   id: string;
@@ -649,7 +650,12 @@ export function OCCPostCard({
           <div className="flex items-center justify-between mb-3 sm:mb-4 pb-3 sm:pb-4 border-b border-black/[0.06]">
             <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
               <div className="h-8 w-8 sm:h-9 sm:w-9 overflow-hidden rounded-full ring-1 ring-black/[0.06]">
-                <img src={post.userAvatarUrl} className="h-full w-full object-cover" />
+                <Avatar className="h-full w-full">
+                  <AvatarImage src={post.userAvatarUrl} alt={post.username} className="object-cover" />
+                  <AvatarFallback className="bg-[#B94921] text-white font-bold text-sm">
+                    {post.username ? post.username[0].toUpperCase() : "U"}
+                  </AvatarFallback>
+                </Avatar>
               </div>
               <div className="min-w-0 flex flex-col gap-0.5">
                 <div className="flex items-center gap-1.5">
@@ -718,7 +724,12 @@ export function OCCPostCard({
                       {comments.map((comment) => (
                         <div key={comment.id} className="group/comment">
                           <div className="flex gap-3 sm:gap-4">
-                            <img src={avatarSrc(comment.user.avatar)} alt="" className="h-8 w-8 sm:h-10 sm:w-10 rounded-full object-cover shrink-0 ring-1 ring-black/5" />
+                            <Avatar className="h-8 w-8 sm:h-10 sm:w-10 shrink-0 ring-1 ring-black/5">
+                              <AvatarImage src={avatarSrc(comment.user.avatar)} alt={comment.user.fullName || "User"} className="object-cover" />
+                              <AvatarFallback className="bg-[#B94921] text-white font-bold text-xs sm:text-sm">
+                                {comment.user.fullName ? comment.user.fullName[0].toUpperCase() : "U"}
+                              </AvatarFallback>
+                            </Avatar>
                             <div className="flex-1 flex flex-col gap-1 sm:gap-1.5">
                               <div className="flex items-center justify-between">
                                 <span className="text-[11px] sm:text-[12px] font-semibold text-black">{comment.user.fullName}</span>

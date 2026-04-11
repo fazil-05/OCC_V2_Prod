@@ -3,7 +3,7 @@ import { motion } from "motion/react";
 import { Link } from "@/lib/router-compat";
 import { P } from "../shared/premiumTokens";
 
-export function JoinSection() {
+export function JoinSection({ userId }: { userId?: string | null }) {
   return (
     <section
       className="relative overflow-hidden px-6 py-32 md:px-12 md:py-44"
@@ -51,7 +51,7 @@ export function JoinSection() {
         </p>
         <div className="mt-12 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
           <Link
-            to="/login"
+            to={userId ? "/clubs/bikers?welcome=true" : "/login"}
             className="font-mono-label px-10 py-[18px] text-[11px] tracking-[0.2em] uppercase transition-all duration-300 hover:scale-[1.02]"
             style={{ background: P.gold, color: P.bg, borderRadius: "2px" }}
             onMouseEnter={(e) => {
@@ -68,7 +68,7 @@ export function JoinSection() {
             Join Now
           </Link>
           <Link
-            to="/login"
+            to={userId ? "/clubs" : "/login"}
             className="font-mono-label px-10 py-[18px] text-[11px] tracking-[0.2em] uppercase transition-all duration-300 hover:scale-[1.02]"
             style={{
               color: P.gold,

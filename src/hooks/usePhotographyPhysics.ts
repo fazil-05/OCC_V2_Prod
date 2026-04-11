@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import { stickySectionScrollProgress } from "../lib/frameImage";
 
 /** Time-based smoothing for stable scroll-cinema across devices (30/60/120Hz). */
@@ -27,10 +27,27 @@ export interface PhotographyPlayhead {
 
 export type PhotographyPhysics = PhotographyPlayhead;
 
+/** Throttled `playhead` for React overlays; `playheadCanvasRef` updates every animation frame for canvas. */
+export type UsePhotographyPhysicsResult = {
+  playhead: PhotographyPlayhead;
+  playheadCanvasRef: MutableRefObject<PhotographyPlayhead>;
+};
+
+const INITIAL_PLAYHEAD: PhotographyPlayhead = {
+  currentFrame: 0,
+  playheadProgress: 0,
+  floatY: 0,
+  tiltDeg: 0,
+  scaleVal: 1,
+  zoomVal: 1,
+  speedIntensity: 0,
+};
+
 export function usePhotographyPhysics(
   containerRef: React.RefObject<HTMLElement | null>,
   totalFrames: number,
-): PhotographyPlayhead {
+): UsePhotographyPhysicsResult {
+  const playheadCanvasRef = useRef<PhotographyPlayhead>(INITIAL_PLAYHEAD);
   const physicsFrame = useRef(0);
   const prevTarget = useRef(0);
   const scrollVel = useRef(0);
@@ -43,15 +60,7 @@ export function usePhotographyPhysics(
   });
   const lastTs = useRef<number | null>(null);
 
-  const [state, setState] = useState<PhotographyPlayhead>({
-    currentFrame: 0,
-    playheadProgress: 0,
-    floatY: 0,
-    tiltDeg: 0,
-    scaleVal: 1,
-    zoomVal: 1,
-    speedIntensity: 0,
-  });
+  const [state, setState] = useState<PhotographyPlayhead>(INITIAL_PLAYHEAD);
   const lastEmitTs = useRef(0);
   const lastEmittedFrame = useRef(0);
   const lastEmittedProgress = useRef(0);
@@ -113,24 +122,27 @@ export function usePhotographyPhysics(
 
         const nextProgress =
           physicsFrame.current / Math.max(1, totalFrames - 1);
+
+        playheadCanvasRef.current = {
+          currentFrame: physicsFrame.current,
+          playheadProgress: nextProgress,
+          floatY: ag.current.floatY,
+          tiltDeg: ag.current.tiltDeg,
+          scaleVal: ag.current.scaleVal,
+          zoomVal: ag.current.zoomVal,
+          speedIntensity: ag.current.speedIntensity,
+        };
+
         const shouldEmit =
-          ts - lastEmitTs.current >= 1000 / 50 || // cap React updates ~50fps
-          Math.abs(physicsFrame.current - lastEmittedFrame.current) >= 0.8 ||
-          Math.abs(nextProgress - lastEmittedProgress.current) >= 0.0025;
+          ts - lastEmitTs.current >= 1000 / 50 || // cap React updates ~50fps for overlays
+          Math.abs(physicsFrame.current - lastEmittedFrame.current) >= 0.35 ||
+          Math.abs(nextProgress - lastEmittedProgress.current) >= 0.002;
 
         if (shouldEmit) {
           lastEmitTs.current = ts;
           lastEmittedFrame.current = physicsFrame.current;
           lastEmittedProgress.current = nextProgress;
-          setState({
-            currentFrame: physicsFrame.current,
-            playheadProgress: nextProgress,
-            floatY: ag.current.floatY,
-            tiltDeg: ag.current.tiltDeg,
-            scaleVal: ag.current.scaleVal,
-            zoomVal: ag.current.zoomVal,
-            speedIntensity: ag.current.speedIntensity,
-          });
+          setState({ ...playheadCanvasRef.current });
         }
       }
       raf = requestAnimationFrame(loop);
@@ -139,5 +151,5 @@ export function usePhotographyPhysics(
     return () => cancelAnimationFrame(raf);
   }, [containerRef, totalFrames]);
 
-  return state;
+  return { playhead: state, playheadCanvasRef };
 }

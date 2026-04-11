@@ -1,5 +1,7 @@
 import { ClubOnboardingEntry } from "@/components/club-onboarding/ClubOnboardingEntry";
+import { getSessionUser } from "@/lib/auth";
 
-export default function Page() {
-  return <ClubOnboardingEntry clubSlug="photography" />;
+export default async function Page() {
+  const user = await getSessionUser();
+  return <ClubOnboardingEntry clubSlug="photography" userId={user?.id} />;
 }

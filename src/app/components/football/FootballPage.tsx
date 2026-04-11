@@ -26,7 +26,7 @@ function FootballLoadingScreen({ progress, loaded }: { progress: number; loaded:
             ⚽
           </motion.div>
           <h1 className="font-headline mb-8 text-4xl tracking-[0.3em] md:text-5xl" style={{ color: FC.text }}>
-            LOADING FOOTBALL CLUB
+            LOADING SPORTS & FOOTBALL
           </h1>
           <div className="w-72">
             <div className="h-px w-full" style={{ background: "#1a1a1a" }}>
@@ -373,7 +373,7 @@ function OurTeamSection() {
   );
 }
 
-function JoinFootballSection() {
+function JoinFootballSection({ userId }: { userId?: string | null }) {
   return (
     <section
       className="relative overflow-hidden px-6 py-32 md:px-12 md:py-44"
@@ -390,15 +390,15 @@ function JoinFootballSection() {
         transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
         className="relative z-10 mx-auto max-w-2xl text-center"
       >
-        <p className="font-mono-label mb-6 text-[11px] tracking-[0.5em] uppercase" style={{ color: P.muted }}>Football Club</p>
+        <p className="font-mono-label mb-6 text-[11px] tracking-[0.5em] uppercase" style={{ color: P.muted }}>Sports & Football</p>
         <h2 className="font-headline text-[clamp(3rem,10vw,6rem)] leading-[0.92] tracking-[0.04em]" style={{ color: P.text }}>YOUR TEAM</h2>
         <h2 className="font-editorial text-[clamp(2.5rem,9vw,5.5rem)] leading-[0.92]" style={{ color: P.green }}>Starts Here.</h2>
         <p className="mx-auto mt-8 max-w-[520px] text-[16px] leading-[1.8]" style={{ color: P.muted, fontFamily: "'DM Sans', sans-serif" }}>
-          Join OCC Football Club — where college players find their squad, play real matches, and build a name on the pitch.
+          Join OCC Sports & Football — where college players find their squad, play real matches, and build a name on the pitch.
         </p>
         <div className="mt-12 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
           <Link
-            to="/login"
+            to={userId ? "/clubs/sports?welcome=true" : "/login"}
             className="font-mono-label px-10 py-[18px] text-[11px] tracking-[0.2em] uppercase transition-all duration-300 hover:scale-[1.02]"
             style={{ background: P.green, color: P.bg, borderRadius: "2px" }}
             onMouseEnter={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = P.green; e.currentTarget.style.boxShadow = `inset 0 0 0 1px ${P.green}`; }}
@@ -407,7 +407,7 @@ function JoinFootballSection() {
             Join Now
           </Link>
           <Link
-            to="/login"
+            to={userId ? "/clubs" : "/login"}
             className="font-mono-label px-10 py-[18px] text-[11px] tracking-[0.2em] uppercase transition-all duration-300 hover:scale-[1.02]"
             style={{ color: P.green, boxShadow: `inset 0 0 0 1px ${P.green}`, borderRadius: "2px" }}
             onMouseEnter={(e) => { e.currentTarget.style.background = P.green; e.currentTarget.style.color = P.bg; }}
@@ -430,7 +430,13 @@ function JoinFootballSection() {
 }
 
 /* ── Main Page ───────────────────────────────────────────── */
-export function FootballPage({ hideLoader = false }: { hideLoader?: boolean } = {}) {
+export function FootballPage({ 
+  hideLoader = false,
+  userId
+}: { 
+  hideLoader?: boolean;
+  userId?: string | null;
+} = {}) {
   const { frames, loaded, progress } = useFootballFrames(FOOTBALL_FRAMES_PATH, FOOTBALL_TOTAL_FRAMES);
 
   return (
@@ -452,7 +458,7 @@ export function FootballPage({ hideLoader = false }: { hideLoader?: boolean } = 
       <StadiumSection />
       <LatestNewsSection />
       <OurTeamSection />
-      <JoinFootballSection />
+      <JoinFootballSection userId={userId} />
 
       <footer className="border-t px-6 py-12 text-center" style={{ borderColor: P.border, background: P.bg }}>
         <p className="font-mono-label text-xs tracking-[0.2em]" style={{ color: P.muted }}>

@@ -11,7 +11,7 @@ import { Experiences } from "../components/Experiences";
 import { ShowcaseCards } from "../components/ShowcaseCards";
 import { LayoutEditorProvider, MovableSection } from "../components/LayoutEditor";
 
-export default function HomePage() {
+export default function HomePage({ userId }: { userId?: string }) {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   useEffect(() => {
@@ -79,7 +79,7 @@ export default function HomePage() {
             <Approach theme={theme} />
           </MovableSection>
           <MovableSection id="featured-work">
-            <FeaturedWork theme={theme} />
+            <FeaturedWork theme={theme} userId={userId} />
           </MovableSection>
           <MovableSection id="experiences">
             <Experiences theme={theme} />

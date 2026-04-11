@@ -248,7 +248,7 @@ function PhotoGigsSection() {
   );
 }
 
-function JoinPhotoSection() {
+function JoinPhotoSection({ userId }: { userId?: string | null }) {
   return (
     <section
       className="relative overflow-hidden px-6 py-32 md:px-12 md:py-44"
@@ -277,7 +277,7 @@ function JoinPhotoSection() {
         </p>
         <div className="mt-12 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
           <Link
-            to="/login"
+            to={userId ? "/clubs/photography?welcome=true" : "/login"}
             className="font-mono-label px-10 py-[18px] text-[11px] tracking-[0.2em] uppercase transition-all duration-300 hover:scale-[1.02]"
             style={{ background: PP.gold, color: PP.bg, borderRadius: "2px" }}
             onMouseEnter={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = PP.gold; e.currentTarget.style.boxShadow = `inset 0 0 0 1px ${PP.gold}`; }}
@@ -286,7 +286,7 @@ function JoinPhotoSection() {
             Join Now
           </Link>
           <Link
-            to="/login"
+            to={userId ? "/clubs" : "/login"}
             className="font-mono-label px-10 py-[18px] text-[11px] tracking-[0.2em] uppercase transition-all duration-300 hover:scale-[1.02]"
             style={{ color: PP.gold, boxShadow: `inset 0 0 0 1px ${PP.gold}`, borderRadius: "2px" }}
             onMouseEnter={(e) => { e.currentTarget.style.background = PP.gold; e.currentTarget.style.color = PP.bg; }}
@@ -308,7 +308,13 @@ function JoinPhotoSection() {
   );
 }
 
-export function PhotographyPage({ hideLoader = false }: { hideLoader?: boolean } = {}) {
+export function PhotographyPage({ 
+  hideLoader = false, 
+  userId 
+}: { 
+  hideLoader?: boolean;
+  userId?: string | null;
+} = {}) {
   const { frames, loaded, progress } = usePhotographyFrames(
     PHOTO_FRAMES_PATH,
     PHOTO_TOTAL_FRAMES,
@@ -349,7 +355,7 @@ export function PhotographyPage({ hideLoader = false }: { hideLoader?: boolean }
 
         <ShootDaySection />
         <PhotoGigsSection />
-        <JoinPhotoSection />
+        <JoinPhotoSection userId={userId} />
 
         <footer
           className="border-t px-6 py-12 text-center"

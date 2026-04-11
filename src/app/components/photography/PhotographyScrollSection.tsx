@@ -28,7 +28,10 @@ interface Props {
 
 export function PhotographyScrollSection({ frames, loaded = true }: Props) {
   const containerRef = useRef<HTMLElement>(null);
-  const playhead = usePhotographyPhysics(containerRef, PHOTO_TOTAL_FRAMES);
+  const { playhead, playheadCanvasRef } = usePhotographyPhysics(
+    containerRef,
+    PHOTO_TOTAL_FRAMES,
+  );
   const p = playhead.playheadProgress;
   const { inCaptured, grainBurstT, baseFrequency } = usePhotographyProgress(p);
 
@@ -62,9 +65,12 @@ export function PhotographyScrollSection({ frames, loaded = true }: Props) {
   const heroVisible = loaded && heroScrollOpacity > 0.02;
 
   useEffect(() => {
-    const leadFrame = playhead.currentFrame + 10;
+    const leadFrame = Math.min(
+      PHOTO_TOTAL_FRAMES - 1,
+      Math.ceil(playheadCanvasRef.current.currentFrame + 32),
+    );
     setFrameSequenceDecodeHint(PHOTO_FRAMES_PATH, PHOTO_TOTAL_FRAMES, leadFrame);
-  }, [playhead.currentFrame]);
+  }, [playhead.currentFrame, playheadCanvasRef]);
 
   return (
     <section
@@ -83,7 +89,7 @@ export function PhotographyScrollSection({ frames, loaded = true }: Props) {
         <PhotographyCanvas
           frames={frames}
           totalFrames={PHOTO_TOTAL_FRAMES}
-          playhead={playhead}
+          playheadCanvasRef={playheadCanvasRef}
           flashOpacity={flashOpacity}
         />
 

@@ -135,7 +135,7 @@ const ConnectIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
 );
 
-function OpenMicExperienceSection() {
+function OpenMicExperienceSection({ userId }: { userId?: string | null }) {
   const cards = [
     { 
       icon: <MicIcon />, 
@@ -265,7 +265,7 @@ function OpenMicExperienceSection() {
                 
                 <div className="mt-8 border-t border-white/5 pt-6 opacity-100 transition-opacity duration-500 md:opacity-0 md:group-hover:opacity-100">
                   <Link
-                    to="/login"
+                    to={userId ? "/clubs/music?welcome=true" : "/login"}
                     className="inline-flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-violet-400 hover:text-violet-300"
                   >
                     Explore Details
@@ -340,7 +340,7 @@ function GigOpportunitiesSection() {
   );
 }
 
-function JoinMusicSection() {
+function JoinMusicSection({ userId }: { userId?: string | null }) {
   return (
     <section
       className="relative overflow-hidden px-6 py-32 md:px-12 md:py-44"
@@ -365,7 +365,7 @@ function JoinMusicSection() {
         </p>
         <div className="mt-12 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
           <Link
-            to="/login"
+            to={userId ? "/clubs/music?welcome=true" : "/login"}
             className="font-mono px-10 py-[18px] text-[11px] tracking-[0.2em] uppercase transition-all duration-300 hover:scale-[1.02]"
             style={{ background: P.accent, color: P.bg, borderRadius: "2px" }}
             onMouseEnter={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = P.accent; e.currentTarget.style.boxShadow = `inset 0 0 0 1px ${P.accent}`; }}
@@ -374,7 +374,7 @@ function JoinMusicSection() {
             Join Now
           </Link>
           <Link
-            to="/login"
+            to={userId ? "/clubs" : "/login"}
             className="font-mono px-10 py-[18px] text-[11px] tracking-[0.2em] uppercase transition-all duration-300 hover:scale-[1.02]"
             style={{ color: P.accent, boxShadow: `inset 0 0 0 1px ${P.accent}`, borderRadius: "2px" }}
             onMouseEnter={(e) => { e.currentTarget.style.background = P.accent; e.currentTarget.style.color = P.bg; }}
@@ -389,7 +389,13 @@ function JoinMusicSection() {
 }
 
 /* ── Main Page ───────────────────────────────────────────── */
-export function MusicPage({ hideLoader = false }: { hideLoader?: boolean }) {
+export function MusicPage({ 
+  hideLoader = false,
+  userId
+}: { 
+  hideLoader?: boolean;
+  userId?: string | null;
+} = {}) {
   const { frames, loaded, progress } = useMusicFrames(MUSIC_FRAMES_PATH, MUSIC_TOTAL_FRAMES, MUSIC_FRAME_PREFIX);
 
   return (
@@ -408,9 +414,9 @@ export function MusicPage({ hideLoader = false }: { hideLoader?: boolean }) {
 
       <MusicScrollSection frames={frames} loaded={loaded} />
 
-      <OpenMicExperienceSection />
+      <OpenMicExperienceSection userId={userId} />
       <GigOpportunitiesSection />
-      <JoinMusicSection />
+      <JoinMusicSection userId={userId} />
 
       <footer className="border-t px-6 py-12 text-center" style={{ borderColor: P.border, background: P.bg }}>
         <p className="font-mono-label text-xs tracking-[0.2em]" style={{ color: P.muted }}>

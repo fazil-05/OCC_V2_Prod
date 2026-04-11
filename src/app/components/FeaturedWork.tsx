@@ -12,7 +12,7 @@ import {
   storeRedirectIntent,
 } from "@/lib/client-auth-redirect";
 
-const SEE_ALL_CLUBS_HREF = authEntryHref(LANDING_POST_AUTH_PATH, "/login");
+const SEE_ALL_CLUBS_HREF = "/clubs";
 
 const TILT_MAX_DEG = 11;
 const PARALLAX_PX = 16;
@@ -109,7 +109,7 @@ const clubs: {
   comingSoon?: boolean;
 }[] = [
   {
-    title: "Football & Sports",
+    title: "Sports & Football",
     tags: "TURF RENTALS • MATCH SETUPS • BALL-SCROLL MOMENTS",
     image: u("photo-1574629810360-7efbbe195018"),
   },
@@ -140,7 +140,7 @@ const clubs: {
   },
 ];
 
-export function FeaturedWork({ theme }: { theme: "dark" | "light" }) {
+export function FeaturedWork({ theme, userId }: { theme: "dark" | "light"; userId?: string }) {
   const navigate = useNavigate();
   const isDark = theme === "dark";
 
@@ -314,9 +314,9 @@ export function FeaturedWork({ theme }: { theme: "dark" | "light" }) {
           className="flex justify-center"
         >
           <Link
-            href={SEE_ALL_CLUBS_HREF}
+            href={userId ? "/clubs" : "/login"}
             prefetch
-            onClick={() => storeRedirectIntent(LANDING_POST_AUTH_PATH)}
+            onClick={() => !userId && storeRedirectIntent(LANDING_POST_AUTH_PATH)}
             className={`flex items-center gap-3 rounded-full px-8 py-4 text-sm font-bold tracking-widest shadow-xl transition-all hover:scale-105 ${
               isDark
                 ? "bg-white/10 text-white shadow-black/30 hover:bg-white/15"

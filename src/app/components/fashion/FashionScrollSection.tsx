@@ -25,7 +25,10 @@ interface Props {
 
 export function FashionScrollSection({ frames, loaded = true }: Props) {
   const containerRef = useRef<HTMLElement>(null);
-  const playhead = useFashionPhysics(containerRef, FASHION_TOTAL_FRAMES);
+  const { playhead, playheadCanvasRef } = useFashionPhysics(
+    containerRef,
+    FASHION_TOTAL_FRAMES,
+  );
   const p = playhead.playheadProgress;
   const { inShow, burstT, baseFrequency } = useFashionProgress(p);
 
@@ -56,9 +59,12 @@ export function FashionScrollSection({ frames, loaded = true }: Props) {
   const heroVisible = loaded && heroScrollOpacity > 0.02;
 
   useEffect(() => {
-    const leadFrame = playhead.currentFrame + 10;
+    const leadFrame = Math.min(
+      FASHION_TOTAL_FRAMES - 1,
+      Math.ceil(playheadCanvasRef.current.currentFrame + 32),
+    );
     setFrameSequenceDecodeHint(FASHION_FRAMES_PATH, FASHION_TOTAL_FRAMES, leadFrame);
-  }, [playhead.currentFrame]);
+  }, [playhead.currentFrame, playheadCanvasRef]);
 
   return (
     <section
@@ -77,7 +83,7 @@ export function FashionScrollSection({ frames, loaded = true }: Props) {
         <FashionCanvas
           frames={frames}
           totalFrames={FASHION_TOTAL_FRAMES}
-          playhead={playhead}
+          playheadCanvasRef={playheadCanvasRef}
           flashOpacity={flashOpacity}
         />
 

@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { displayClubMembers } from "@/lib/socialDisplay";
 import { pusherServer } from "@/lib/pusher";
+import { resolveClubAvatar } from "@/lib/postImageUrl";
 
 export async function POST(_req: NextRequest, { params }: { params: { slug: string } }) {
   const user = await getSessionUser();
@@ -46,11 +47,14 @@ export async function POST(_req: NextRequest, { params }: { params: { slug: stri
     updatedClub.memberCount,
     updatedClub.memberDisplayBase,
   );
+  const joinedAvatarUrl = resolveClubAvatar(user.avatar, club.name);
+
   await pusherServer.trigger(`club-${club.id}`, "member-joined", {
     clubId: club.id,
     memberCount: updatedClub.memberCount,
     memberDisplayBase: updatedClub.memberDisplayBase,
     displayMemberCount,
+    joinedAvatarUrl,
   });
 
   return NextResponse.json({

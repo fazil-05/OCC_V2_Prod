@@ -4,7 +4,7 @@ export const OCC_PREMIUM_CLUB_IMAGES = {
   music: "/premium-assets/club_music_premium_169_1775157345029.png",
   football: "/premium-assets/club_football_premium_169_1775157363794.png",
   photography: "/premium-assets/club_photography_premium_169_1775157399055.png",
-  fitness: "/premium-assets/club_fitness_premium.png",
+  fitness: "/premium-assets/club_fitness_premium_occ.png",
   fashion: "/premium-assets/club_fashion_premium.png",
 } as const;
 
@@ -68,7 +68,7 @@ export function resolvePostImageUrlForFeed(
 }
 export function resolveClubAvatar(
   userAvatar: string | null | undefined,
-  clubName: string,
+  _clubName: string,
 ): string {
   if (userAvatar?.trim() && userAvatar.startsWith("http")) return userAvatar.trim();
   if (userAvatar?.trim() && userAvatar.startsWith("/uploads/")) {
@@ -76,22 +76,5 @@ export function resolveClubAvatar(
      return abs ?? userAvatar.trim();
   }
 
-  // HUMAN AVATARS (Unsplash high-quality placeholders)
-  const categoryAvatars: Record<string, string> = {
-    fashion: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&h=200&auto=format&fit=crop",
-    music: "https://images.unsplash.com/photo-1520813792240-56fc4a3765a7?q=80&w=200&h=200&auto=format&fit=crop",
-    bikers: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=200&h=200&auto=format&fit=crop",
-    football: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&h=200&auto=format&fit=crop",
-    photography: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=200&h=200&auto=format&fit=crop",
-    default: "https://images.unsplash.com/photo-1554151228-14d9def656e4?q=80&w=200&h=200&auto=format&fit=crop"
-  };
-
-  const nameUpper = clubName.toUpperCase();
-  if (nameUpper.includes("FASHION")) return categoryAvatars.fashion;
-  if (nameUpper.includes("MUSIC")) return categoryAvatars.music;
-  if (nameUpper.includes("BIKER")) return categoryAvatars.bikers;
-  if (nameUpper.includes("FOOTBALL") || nameUpper.includes("SPORT")) return categoryAvatars.football;
-  if (nameUpper.includes("PHOTO")) return categoryAvatars.photography;
-
-  return categoryAvatars.default;
+  return "";
 }

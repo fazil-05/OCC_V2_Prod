@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, type MutableRefObject } from "react";
 import type { PhotographyPlayhead as FashionPlayhead } from "../../../hooks/usePhotographyPhysics";
 
 interface Props {
   frames: HTMLImageElement[];
   totalFrames: number;
-  playhead: FashionPlayhead;
+  playheadCanvasRef: MutableRefObject<FashionPlayhead>;
   flashOpacity: number;
 }
 
@@ -19,6 +19,12 @@ function drawSingleFrame(
   effectiveScale: number,
 ) {
   if (!img || !img.complete || !img.naturalWidth) return false;
+
+  ctx.imageSmoothingEnabled = true;
+  if ("imageSmoothingQuality" in ctx) {
+    (ctx as CanvasRenderingContext2D & { imageSmoothingQuality?: string }).imageSmoothingQuality =
+      "high";
+  }
 
   const fa = img.naturalWidth / img.naturalHeight;
   const ca = W / H;
@@ -71,22 +77,25 @@ function drawFrameBlend(
     }
   }
 
-  if (blend > 0.005 && frameB !== frameA && frames[frameB]?.complete) {
+  const imgB = frames[frameB];
+  const bReady = imgB?.complete && imgB.naturalWidth > 0;
+  if (blend > 0.001 && frameB !== frameA && bReady) {
     ctx.globalAlpha = blend;
-    drawSingleFrame(ctx, frames[frameB], W, H, floatY, tiltDeg, effectiveScale);
+    drawSingleFrame(ctx, imgB, W, H, floatY, tiltDeg, effectiveScale);
   }
+  ctx.globalAlpha = 1;
 }
 
 export function FashionCanvas({
   frames,
   totalFrames,
-  playhead,
+  playheadCanvasRef,
   flashOpacity,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef(0);
-  const ref = useRef({ playhead, flashOpacity });
-  ref.current = { playhead, flashOpacity };
+  const flashRef = useRef(flashOpacity);
+  flashRef.current = flashOpacity;
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -107,8 +116,9 @@ export function FashionCanvas({
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    const { playhead: ph, flashOpacity: fo } = ref.current;
-    const { currentFrame, floatY, tiltDeg, scaleVal, zoomVal, speedIntensity } = ph;
+    const ph = playheadCanvasRef.current;
+    const { currentFrame, floatY, tiltDeg, scaleVal, zoomVal } = ph;
+    const fo = flashRef.current;
 
     // Background clearing
     ctx.fillStyle = "#050505";
@@ -136,7 +146,7 @@ export function FashionCanvas({
       ctx.globalAlpha = 1;
     }
 
-  }, [frames, totalFrames]);
+  }, [frames, totalFrames, playheadCanvasRef]);
 
   useEffect(() => {
     const loop = () => {

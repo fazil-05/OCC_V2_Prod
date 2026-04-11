@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { AnalyticsClient } from "@/components/club-header/HeaderAnalytics";
-import { getClubOnboardingConfig } from "@/config/clubOnboardingQuestions";
+import {
+  getClubOnboardingConfig,
+  CLUB_ONBOARDING_VARIANT_COUNT,
+} from "@/config/clubOnboardingQuestions";
 
 const ANSWER_FIELDS = [
   "answer1",
@@ -37,21 +40,23 @@ export default async function HeaderAnalyticsPage() {
       : [];
 
   const onboardingConfig = managedClub
-    ? getClubOnboardingConfig(managedClub.slug)
+    ? getClubOnboardingConfig(managedClub.slug, 0)
     : null;
 
-  const onboardingInsights =
-    onboardingConfig?.questions.map((question, index) => {
-      const field = ANSWER_FIELDS[index];
-      const total = onboardingRows.length;
+  type OnboardRow = (typeof onboardingRows)[number];
 
+  function insightsForVariant(rows: OnboardRow[], slug: string, variant: number) {
+    if (rows.length === 0) return [];
+    const config = getClubOnboardingConfig(slug, variant);
+    return config.questions.map((question, index) => {
+      const field = ANSWER_FIELDS[index];
+      const total = rows.length;
       return {
         key: question.key,
         prompt: question.prompt,
         total,
         options: question.options.map((label) => {
-          const count = onboardingRows.filter((row) => row[field] === label).length;
-
+          const count = rows.filter((row) => row[field] === label).length;
           return {
             label,
             count,
@@ -59,7 +64,28 @@ export default async function HeaderAnalyticsPage() {
           };
         }),
       };
-    }) ?? [];
+    });
+  }
+
+  const byVariant = new Map<number, OnboardRow[]>();
+  for (const row of onboardingRows) {
+    const v = Math.min(
+      CLUB_ONBOARDING_VARIANT_COUNT - 1,
+      Math.max(0, row.questionVariant ?? 0),
+    );
+    if (!byVariant.has(v)) byVariant.set(v, []);
+    byVariant.get(v)!.push(row);
+  }
+
+  const onboardingInsightSections =
+    managedClub && byVariant.size > 0
+      ? [...byVariant.entries()]
+          .sort((a, b) => a[0] - b[0])
+          .map(([variant, rows]) => ({
+            title: `Question set ${variant + 1} · ${rows.length} response${rows.length === 1 ? "" : "s"}`,
+            insights: insightsForVariant(rows, managedClub.slug, variant),
+          }))
+      : [];
 
   return (
     <div className="space-y-6">
@@ -73,7 +99,7 @@ export default async function HeaderAnalyticsPage() {
       <AnalyticsClient
         totalMembers={totalMembers}
         totalPosts={totalPosts}
-        onboardingInsights={onboardingInsights}
+        onboardingInsightSections={onboardingInsightSections}
         clubName={onboardingConfig?.clubName ?? managedClub?.name ?? "Your Club"}
       />
     </div>

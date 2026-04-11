@@ -144,7 +144,13 @@ function FashionGrainOverlay() {
   );
 }
 
-export function FashionPage({ hideLoader = false }: { hideLoader?: boolean } = {}) {
+export function FashionPage({ 
+  hideLoader = false,
+  userId
+}: { 
+  hideLoader?: boolean;
+  userId?: string | null;
+} = {}) {
   const { frames, loaded, progress } = useFashionFrames(
     FASHION_FRAMES_PATH,
     FASHION_TOTAL_FRAMES,
@@ -186,7 +192,7 @@ export function FashionPage({ hideLoader = false }: { hideLoader?: boolean } = {
         <FashionEditorialSection />
         <FashionTimelineStrip />
         <FashionGigsSection />
-        <FashionJoinSection />
+        <FashionJoinSection userId={userId} />
 
         <footer
           className="border-t px-6 py-12 text-center"

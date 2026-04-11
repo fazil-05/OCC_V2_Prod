@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, type MutableRefObject } from "react";
 import type { PhotographyPlayhead } from "../../../hooks/usePhotographyPhysics";
 
 interface Props {
   frames: HTMLImageElement[];
   totalFrames: number;
-  playhead: PhotographyPlayhead;
+  /** Updates every animation frame — do not use throttled React state for scrubbing. */
+  playheadCanvasRef: MutableRefObject<PhotographyPlayhead>;
   flashOpacity: number;
 }
 
@@ -19,6 +20,12 @@ function drawSingleFrame(
   effectiveScale: number,
 ) {
   if (!img || !img.complete || !img.naturalWidth) return false;
+
+  ctx.imageSmoothingEnabled = true;
+  if ("imageSmoothingQuality" in ctx) {
+    (ctx as CanvasRenderingContext2D & { imageSmoothingQuality?: string }).imageSmoothingQuality =
+      "high";
+  }
 
   const fa = img.naturalWidth / img.naturalHeight;
   const ca = W / H;
@@ -63,7 +70,6 @@ function drawFrameBlend(
   ctx.globalAlpha = 1;
   const okA = drawSingleFrame(ctx, frames[frameA], W, H, floatY, tiltDeg, effectiveScale);
 
-  // If frameA failed, try a neighboring frame as fallback to prevent black flickers
   if (!okA) {
     for (let offset = 1; offset < 10; offset++) {
       const fallback = Math.max(0, frameA - offset);
@@ -71,32 +77,26 @@ function drawFrameBlend(
     }
   }
 
-  if (blend > 0.005 && frameB !== frameA && frames[frameB]?.complete) {
+  const imgB = frames[frameB];
+  const bReady = imgB?.complete && imgB.naturalWidth > 0;
+  if (blend > 0.001 && frameB !== frameA && bReady) {
     ctx.globalAlpha = blend;
-    drawSingleFrame(ctx, frames[frameB], W, H, floatY, tiltDeg, effectiveScale);
+    drawSingleFrame(ctx, imgB, W, H, floatY, tiltDeg, effectiveScale);
   }
+
+  ctx.globalAlpha = 1;
 }
 
 export function PhotographyCanvas({
   frames,
   totalFrames,
-  playhead,
+  playheadCanvasRef,
   flashOpacity,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef(0);
-  const lastDrawnRef = useRef({
-    width: 0,
-    height: 0,
-    frame: -1,
-    floatY: 999,
-    tiltDeg: 999,
-    scale: 999,
-    flashOpacity: -1,
-  });
-  // Cache state in ref to avoid re-creating the RAF loop on every re-render
-  const ref = useRef({ playhead, flashOpacity });
-  ref.current = { playhead, flashOpacity };
+  const flashRef = useRef(flashOpacity);
+  flashRef.current = flashOpacity;
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -117,21 +117,11 @@ export function PhotographyCanvas({
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    const { playhead: ph, flashOpacity: fo } = ref.current;
+    const ph = playheadCanvasRef.current;
     const { currentFrame, floatY, tiltDeg, scaleVal, zoomVal } = ph;
     const effectiveScale = scaleVal * zoomVal;
-    const frameInt = Math.floor(currentFrame);
-    const last = lastDrawnRef.current;
-    const isSameSize = last.width === W && last.height === H;
-    const isSameVisual =
-      Math.abs(last.frame - frameInt) < 0.001 &&
-      Math.abs(last.floatY - floatY) < 0.2 &&
-      Math.abs(last.tiltDeg - tiltDeg) < 0.02 &&
-      Math.abs(last.scale - effectiveScale) < 0.0015 &&
-      Math.abs(last.flashOpacity - fo) < 0.01;
-    if (isSameSize && isSameVisual) return;
+    const fo = flashRef.current;
 
-    // Background clearing
     ctx.fillStyle = "#0C0C0A";
     ctx.fillRect(0, 0, W, H);
 
@@ -149,25 +139,13 @@ export function PhotographyCanvas({
       );
     }
 
-    // Flash overlay
     if (fo > 0.01) {
       ctx.globalAlpha = fo;
       ctx.fillStyle = "#FFFFFF";
       ctx.fillRect(0, 0, W, H);
       ctx.globalAlpha = 1;
     }
-
-    lastDrawnRef.current = {
-      width: W,
-      height: H,
-      frame: frameInt,
-      floatY,
-      tiltDeg,
-      scale: effectiveScale,
-      flashOpacity: fo,
-    };
-
-  }, [frames, totalFrames]);
+  }, [frames, totalFrames, playheadCanvasRef]);
 
   useEffect(() => {
     const loop = () => {

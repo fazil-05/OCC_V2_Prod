@@ -195,7 +195,7 @@ export function FashionGigsSection() {
   );
 }
 
-export function FashionJoinSection() {
+export function FashionJoinSection({ userId }: { userId?: string | null }) {
   return (
     <section
       className="relative overflow-hidden px-6 py-32 md:px-12 md:py-44"
@@ -228,7 +228,7 @@ export function FashionJoinSection() {
         </p>
         <div className="mt-12 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
           <Link
-            to="/login"
+            to={userId ? "/clubs/fashion?welcome=true" : "/login"}
             className="font-mono-label px-10 py-[18px] text-[11px] tracking-[0.2em] uppercase transition-all duration-300 hover:scale-[1.02]"
             style={{ background: FP.gold, color: FP.bg, borderRadius: "2px" }}
             onMouseEnter={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = FP.gold; e.currentTarget.style.boxShadow = `inset 0 0 0 1px ${FP.gold}`; }}
@@ -237,7 +237,7 @@ export function FashionJoinSection() {
             Join Now
           </Link>
           <Link
-            to="/login"
+            to={userId ? "/clubs" : "/login"}
             className="font-mono-label px-10 py-[18px] text-[11px] tracking-[0.2em] uppercase transition-all duration-300 hover:scale-[1.02]"
             style={{ color: FP.gold, boxShadow: `inset 0 0 0 1px ${FP.gold}`, borderRadius: "2px" }}
             onMouseEnter={(e) => { e.currentTarget.style.background = FP.gold; e.currentTarget.style.color = FP.bg; }}

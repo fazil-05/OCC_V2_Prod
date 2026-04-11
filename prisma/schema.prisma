@@ -249,6 +249,8 @@ model ClubOnboarding {
   id        String   @id @default(cuid())
   userId    String
   clubSlug  String
+  /// Which of the 3 rotating question sets (0–2) the member saw
+  questionVariant Int @default(0)
   answer1   String
   answer2   String
   answer3   String

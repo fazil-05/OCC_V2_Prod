@@ -6,7 +6,10 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { gigWhereNotLegacyDummy } from "@/lib/legacyDummyGigs";
 import { displayClubMembers, displayPostLikes, formatSocialCount } from "@/lib/socialDisplay";
-import { resolveClubAvatar, resolvePostImageUrlForFeed } from "@/lib/postImageUrl";
+import { resolveClubAvatar, resolvePostImageUrlForFeed, premiumClubImageForName } from "@/lib/postImageUrl";
+import { clubHeroAvatarUrls } from "@/lib/clubHeroAvatars";
+import { ClubHeroMemberStack } from "@/components/dashboard/ClubHeroMemberStack";
+import { ClubWelcomeMessage } from "@/components/dashboard/ClubWelcomeMessage";
 
 function getTimeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -23,7 +26,7 @@ function getTimeAgo(date: Date): string {
 
 const CINEMATIC_SLUGS: Record<string, { route: string; label: string; gradient: string }> = {
   bikers:      { route: "/bikers",      label: "Bikers Ride",    gradient: "from-amber-900/40 via-[#0C0C0A] to-orange-950/30" },
-  sports:      { route: "/football",    label: "Football Club",  gradient: "from-green-900/40 via-[#060606] to-emerald-950/30" },
+  sports:      { route: "/football",    label: "Sports & Football",  gradient: "from-green-900/40 via-[#060606] to-emerald-950/30" },
   photography: { route: "/photography", label: "Photography",    gradient: "from-yellow-900/30 via-[#0a0a0a] to-amber-950/20" },
   fashion:     { route: "/fashion",     label: "Fashion Club",   gradient: "from-indigo-900/30 via-[#050505] to-purple-950/20" },
 };
@@ -38,9 +41,16 @@ export default async function ClubDetailPage({
   const club = await prisma.club.findFirst({
     where: { slug: params.slug },
     include: {
+      header: {
+        select: { id: true, avatar: true, role: true, clubManagedId: true, fullName: true },
+      },
       members: {
+        orderBy: { joinedAt: "desc" },
+        take: 48,
         include: {
-          user: true,
+          user: {
+            select: { id: true, avatar: true, role: true, clubManagedId: true, fullName: true },
+          },
         },
       },
       events: {
@@ -90,15 +100,14 @@ export default async function ClubDetailPage({
     displayClubMembers(club.id, club.memberCount || club.members.length, club.memberDisplayBase),
   )} Members`;
 
-  const INDIAN_PROFILE_PICS = [
-    "https://images.unsplash.com/photo-1507152832244-10d45c7eda57?w=100&q=80",
-    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80",
-    "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=100&q=80",
-    "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&q=80",
-  ];
+  const heroAvatarUrls = clubHeroAvatarUrls(
+    { id: club.id, name: club.name, header: club.header },
+    club.members,
+  );
 
   return (
     <div className="space-y-8 pb-10">
+      <ClubWelcomeMessage clubName={club.name} />
       {CINEMATIC_SLUGS[club.slug] ? (
         <Link
           href={CINEMATIC_SLUGS[club.slug].route}
@@ -116,13 +125,14 @@ export default async function ClubDetailPage({
       ) : null}
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden rounded-[3rem] border border-black/5 bg-gradient-to-br from-indigo-50/50 to-white shadow-xl shadow-black/5">
+      <section className="relative overflow-hidden rounded-[3rem] border border-black/5 bg-white shadow-xl shadow-black/5">
         <div className="absolute inset-0 z-0">
           <img 
-            src={club.coverImage || "/premium-assets/club_fashion_premium_169_1775157327855.png"} 
-            className="h-full w-full object-cover opacity-5 transition-opacity duration-1000"
+            src={club.coverImage || premiumClubImageForName(club.name)} 
+            className="h-full w-full object-cover opacity-100 transition-opacity duration-1000"
             alt=""
           />
+          <div className="absolute inset-0 bg-gradient-to-r from-white via-white/40 to-transparent" />
         </div>
 
         <div className="relative z-10 flex flex-col gap-6 p-8 lg:p-12">
@@ -145,19 +155,13 @@ export default async function ClubDetailPage({
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-6 pt-10 border-t border-black/5">
-            <div className="flex items-center -space-x-3">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="h-10 w-10 rounded-full border-2 border-white bg-slate-100 overflow-hidden shadow-sm">
-                   <img src={INDIAN_PROFILE_PICS[i]} className="h-full w-full object-cover" />
-                </div>
-              ))}
-              <span className="pl-6 text-[13px] font-bold text-slate-400">
-                {formatSocialCount(
-                  displayClubMembers(club.id, club.memberCount || club.members.length, club.memberDisplayBase),
-                )}{" "}
-                members active
-              </span>
-            </div>
+            <ClubHeroMemberStack
+              key={club.id}
+              clubId={club.id}
+              initialAvatarUrls={heroAvatarUrls}
+              initialMemberCount={club.memberCount || club.members.length}
+              memberDisplayBase={club.memberDisplayBase ?? null}
+            />
             <JoinClubButton slug={club.slug} joined={joined} />
           </div>
         </div>
@@ -166,7 +170,7 @@ export default async function ClubDetailPage({
       <ClubTabs
         currentUserId={user.id}
         posts={club.posts.map((p) => {
-          const avatar = p.user.avatar || INDIAN_PROFILE_PICS[Math.floor(Math.random() * INDIAN_PROFILE_PICS.length)];
+          const avatar = p.user.avatar;
           const postImg = resolvePostImageUrlForFeed(p.imageUrl, club.name);
           const postImgs =
             Array.isArray(p.imageUrls) && p.imageUrls.length > 0

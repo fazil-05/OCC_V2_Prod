@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   getClubOnboardingConfig,
+  pickRandomOnboardingVariantIndex,
   type ClubOnboardingSlug,
 } from "@/config/clubOnboardingQuestions";
 
@@ -20,6 +21,7 @@ function postAnswers(payload: {
   userId?: string | null;
   clubSlug: ClubOnboardingSlug;
   answers: ClubOnboardingAnswers;
+  questionVariant: number;
 }) {
   const body = JSON.stringify(payload);
 
@@ -44,7 +46,14 @@ export function useClubOnboarding({
   clubSlug: ClubOnboardingSlug;
   userId?: string | null;
 }) {
-  const config = useMemo(() => getClubOnboardingConfig(clubSlug), [clubSlug]);
+  const questionVariant = useMemo(
+    () => pickRandomOnboardingVariantIndex(),
+    [clubSlug],
+  );
+  const config = useMemo(
+    () => getClubOnboardingConfig(clubSlug, questionVariant),
+    [clubSlug, questionVariant],
+  );
   const [answers, setAnswers] = useState<ClubOnboardingAnswers>(EMPTY_ANSWERS);
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -67,9 +76,10 @@ export function useClubOnboarding({
         userId,
         clubSlug,
         answers: nextAnswers,
+        questionVariant,
       });
     },
-    [clubSlug, hasSubmitted, userId],
+    [clubSlug, hasSubmitted, userId, questionVariant],
   );
 
   const chooseOption = useCallback(

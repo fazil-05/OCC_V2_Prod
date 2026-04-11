@@ -8,6 +8,7 @@ import { FitnessScrollSection } from "./FitnessScrollSection";
 
 interface FitnessPageProps {
   hideLoader?: boolean;
+  userId?: string | null;
 }
 
 function LoadingHUD({ progress, loaded }: { progress: number; loaded: boolean }) {
@@ -35,7 +36,7 @@ function LoadingHUD({ progress, loaded }: { progress: number; loaded: boolean })
   );
 }
 
-function JoinFitness() {
+function JoinFitness({ userId }: { userId?: string | null }) {
   return (
     <section className="relative z-20 overflow-hidden px-6 py-32 md:px-12 md:py-48 bg-[#0C0F0C]">
       <motion.div 
@@ -55,10 +56,10 @@ function JoinFitness() {
 
         <div className="mt-20">
           <Link
-            to="/login"
+            to={userId ? "/clubs/fitness?welcome=true" : "/login"}
             className="inline-block px-14 py-5 bg-[#CCFF00] text-black font-black uppercase tracking-widest text-[12px] rounded-full hover:scale-105 transition-transform"
           >
-            Book Session
+            Launch Experience
           </Link>
         </div>
       </motion.div>
@@ -66,7 +67,10 @@ function JoinFitness() {
   );
 }
 
-export function FitnessPage({ hideLoader = false }: FitnessPageProps) {
+export function FitnessPage({ 
+  hideLoader = false, 
+  userId 
+}: FitnessPageProps) {
   const { frames, loaded, progress } = useFitnessFrames(FITNESS_FRAMES_PATH, FITNESS_TOTAL_FRAMES, FITNESS_FRAME_PREFIX);
 
   return (
@@ -94,7 +98,7 @@ export function FitnessPage({ hideLoader = false }: FitnessPageProps) {
         </div>
       </section>
 
-      <JoinFitness />
+      <JoinFitness userId={userId} />
       
       <footer className="py-12 text-center border-t border-white/5 opacity-50">
         <p className="text-[10px] uppercase tracking-[0.4em]">© 2026 OCC Fitness Club Bangalore</p>

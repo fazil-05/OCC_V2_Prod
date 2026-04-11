@@ -22,7 +22,7 @@ interface Props {
 
 export function BikeScrollSection({ frames, loaded = true }: Props) {
   const containerRef = useRef<HTMLElement>(null);
-  const playhead = useBikersPhysics(containerRef, TOTAL_FRAMES);
+  const { playhead, playheadCanvasRef } = useBikersPhysics(containerRef, TOTAL_FRAMES);
   const p = playhead.playheadProgress;
 
   const [flashOpacity, setFlashOpacity] = useState(0);
@@ -51,9 +51,12 @@ export function BikeScrollSection({ frames, loaded = true }: Props) {
   const heroVisible = loaded && heroScrollOpacity > 0.02;
 
   useEffect(() => {
-    const leadFrame = playhead.currentFrame + 10;
+    const leadFrame = Math.min(
+      TOTAL_FRAMES - 1,
+      Math.ceil(playheadCanvasRef.current.currentFrame + 32),
+    );
     setFrameSequenceDecodeHint(FRAMES_PATH, TOTAL_FRAMES, leadFrame);
-  }, [playhead.currentFrame]);
+  }, [playhead.currentFrame, playheadCanvasRef]);
 
   return (
     <section
@@ -68,7 +71,7 @@ export function BikeScrollSection({ frames, loaded = true }: Props) {
         <BikersCanvas
           frames={frames}
           totalFrames={TOTAL_FRAMES}
-          playhead={playhead}
+          playheadCanvasRef={playheadCanvasRef}
           flashOpacity={flashOpacity}
         />
 

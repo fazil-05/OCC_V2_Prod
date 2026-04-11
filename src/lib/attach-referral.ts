@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher";
 import { resolveClubHeaderByReferralCode } from "@/lib/referral-resolve";
 import { displayClubMembers } from "@/lib/socialDisplay";
+import { resolveClubAvatar } from "@/lib/postImageUrl";
 
 /**
  * Links a student to a club header by referral code (membership + referral_stats + notification + Pusher).
@@ -63,11 +64,17 @@ export async function attachStudentToReferralCode(params: {
       });
 
       try {
+        const student = await prisma.user.findUnique({
+          where: { id: params.studentId },
+          select: { avatar: true },
+        });
+        const joinedAvatarUrl = resolveClubAvatar(student?.avatar, managedClub.name);
         await pusherServer.trigger(`club-${managedClub.id}`, "member-joined", {
           clubId: managedClub.id,
           memberCount,
           memberDisplayBase: updatedClub.memberDisplayBase,
           displayMemberCount,
+          joinedAvatarUrl,
         });
       } catch {
         /* non-critical */

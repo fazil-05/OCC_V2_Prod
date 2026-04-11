@@ -157,7 +157,7 @@ export function ClubOnboardingGate({
 
   return (
     <>
-      {experienceMounted ? <Experience /> : null}
+      {experienceMounted ? <Experience userId={userId} /> : null}
       {!revealed ? (
         <ClubOnboardingFlow
           config={onboarding.config}

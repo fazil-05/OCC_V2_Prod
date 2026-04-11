@@ -14,7 +14,13 @@ import { GigsSection } from "./GigsSection";
 import { JoinSection } from "./JoinSection";
 import { WheelStoriesSection } from "../WheelStories";
 
-export function BikersRidePage({ hideLoader = false }: { hideLoader?: boolean } = {}) {
+export function BikersRidePage({ 
+  hideLoader = false,
+  userId
+}: { 
+  hideLoader?: boolean;
+  userId?: string | null;
+} = {}) {
   const { frames, loaded, progress } = useBikersFrames(FRAMES_PATH, TOTAL_FRAMES);
 
   return (
@@ -55,7 +61,7 @@ export function BikersRidePage({ hideLoader = false }: { hideLoader?: boolean } 
         <EventsSection />
         <BikersPulseSection />
         <GigsSection />
-        <JoinSection />
+        <JoinSection userId={userId} />
       </div>
 
       <footer

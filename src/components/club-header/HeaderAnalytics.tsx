@@ -14,15 +14,20 @@ type OnboardingInsight = {
   }[];
 };
 
+type OnboardingInsightSection = {
+  title: string;
+  insights: OnboardingInsight[];
+};
+
 export function AnalyticsClient({
   totalMembers,
   totalPosts,
-  onboardingInsights,
+  onboardingInsightSections,
   clubName,
 }: {
   totalMembers: number;
   totalPosts: number;
-  onboardingInsights: OnboardingInsight[];
+  onboardingInsightSections: OnboardingInsightSection[];
   clubName: string;
 }) {
   const metrics = [
@@ -117,41 +122,49 @@ export function AnalyticsClient({
             </p>
           </div>
 
-          {onboardingInsights.length === 0 || onboardingInsights.every((item) => item.total === 0) ? (
+          {onboardingInsightSections.length === 0 ||
+          onboardingInsightSections.every((s) => s.insights.every((q) => q.total === 0)) ? (
             <div className="mt-8 rounded-[1.5rem] border border-white/[0.05] bg-white/[0.02] px-5 py-6 text-sm text-white/45">
               No onboarding responses saved yet for your referred members.
             </div>
           ) : (
-            <div className="mt-8 space-y-8">
-              {onboardingInsights.map((question) => (
-                <div key={question.key} className="space-y-4">
-                  <div className="flex flex-col gap-1">
-                    <h4 className="text-base font-semibold text-white">{question.prompt}</h4>
-                    <p className="text-[11px] uppercase tracking-[0.22em] text-white/25">
-                      {question.total} responses
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
-                    {question.options.map((option) => (
-                      <div key={option.label} className="space-y-1.5">
-                        <div className="flex items-center justify-between gap-4 text-sm text-white/78">
-                          <span>{option.label}</span>
-                          <span className="tabular-nums text-white/40">
-                            {option.count} · {option.percentage}%
-                          </span>
-                        </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-white/[0.05]">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${option.percentage}%` }}
-                            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                            className="h-full rounded-full bg-gradient-to-r from-[#5227FF] via-[#8C6DFD] to-[#D4AF37]"
-                          />
-                        </div>
+            <div className="mt-8 space-y-12">
+              {onboardingInsightSections.map((section) => (
+                <div key={section.title} className="space-y-8">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#8C6DFD]/90">
+                    {section.title}
+                  </p>
+                  {section.insights.map((question) => (
+                    <div key={`${section.title}-${question.key}`} className="space-y-4">
+                      <div className="flex flex-col gap-1">
+                        <h4 className="text-base font-semibold text-white">{question.prompt}</h4>
+                        <p className="text-[11px] uppercase tracking-[0.22em] text-white/25">
+                          {question.total} responses
+                        </p>
                       </div>
-                    ))}
-                  </div>
+
+                      <div className="space-y-3">
+                        {question.options.map((option) => (
+                          <div key={option.label} className="space-y-1.5">
+                            <div className="flex items-center justify-between gap-4 text-sm text-white/78">
+                              <span>{option.label}</span>
+                              <span className="tabular-nums text-white/40">
+                                {option.count} · {option.percentage}%
+                              </span>
+                            </div>
+                            <div className="h-2 overflow-hidden rounded-full bg-white/[0.05]">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${option.percentage}%` }}
+                                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                                className="h-full rounded-full bg-gradient-to-r from-[#5227FF] via-[#8C6DFD] to-[#D4AF37]"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
