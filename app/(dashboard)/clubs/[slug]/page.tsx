@@ -78,7 +78,7 @@ export default async function ClubDetailPage({
     notFound();
   }
 
-  const joined = await prisma.clubMember.findUnique({
+  const joined = await prisma.clubMembership.findUnique({
     where: {
       userId_clubId: {
         userId: user.id,
