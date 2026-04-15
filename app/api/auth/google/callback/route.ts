@@ -138,9 +138,12 @@ export async function GET(req: NextRequest) {
   // For mobile flows: if the state itself encodes a valid mobile return URL, we trust the state.
   const csrfValid = cookieState && cookieState.split(":")[0] === stateCsrf;
   const mobileStateTrusted = isMobileFlow && stateDecodedReturnUrl;
+  // Poll mode is trusted by design — it doesn't set cookies (mobile ephemeral session)
+  // and the token is only delivered via polling with the same pollKey
+  const pollModeTrusted = isPollMode && !!pollKey;
 
-  if (!csrfValid && !mobileStateTrusted) {
-    console.warn(`[GOOGLE CALLBACK] CSRF fail — cookieState: ${cookieState}, stateCsrf: ${stateCsrf}, isMobile: ${isMobileFlow}`);
+  if (!csrfValid && !mobileStateTrusted && !pollModeTrusted) {
+    console.warn(`[GOOGLE CALLBACK] CSRF fail — cookieState: ${cookieState}, stateCsrf: ${stateCsrf}, isMobile: ${isMobileFlow}, isPoll: ${isPollMode}`);
     return failRedirect("Invalid session. Please try signing in again.");
   }
 

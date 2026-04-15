@@ -22,6 +22,26 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Google OAuth is not configured" }, { status: 503 });
   }
 
+  const mode = req.nextUrl.searchParams.get("mode");
+  const isPollMode = mode === "poll";
+
+  // === POLL MODE (mobile app) ===
+  // The app provides its own state containing the pollKey.
+  // Skip CSRF cookies — the app validates via polling, not via cookies.
+  if (isPollMode) {
+    const appState = req.nextUrl.searchParams.get("state");
+    if (!appState || !appState.includes(":poll:")) {
+      return NextResponse.json({ error: "Invalid poll state" }, { status: 400 });
+    }
+
+    const redirectUri = oauthCallbackUrl(req);
+    const url = buildGoogleAuthUrl({ clientId, redirectUri, state: appState });
+
+    // Redirect straight to Google — no cookies needed
+    return NextResponse.redirect(url);
+  }
+
+  // === WEB MODE (normal browser flow) ===
   const redirectAfter = safeRedirectPath(req.nextUrl.searchParams.get("redirect"));
   const rawReferral = req.nextUrl.searchParams.get("referral")?.trim() ?? "";
   const normalizedReferral = rawReferral ? rawReferral.toUpperCase().slice(0, 48) : "";
