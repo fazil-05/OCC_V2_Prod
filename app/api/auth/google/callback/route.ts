@@ -83,9 +83,7 @@ export async function GET(req: NextRequest) {
   const stateParts = (state ?? "").split(":");
   const stateCsrf = stateParts[0] ?? "";
   const isPollMode = stateParts[1] === "poll";
-  const pollKey = isPollMode ? (() => {
-    try { return Buffer.from(stateParts[2] ?? "", "base64").toString("utf-8"); } catch { return ""; }
-  })() : "";
+  const pollKey = isPollMode ? (stateParts[2] ?? "") : "";
 
   // Legacy returnTo mode
   const stateEncodedReturn = !isPollMode && stateParts.length > 1 ? stateParts[1] : null;
